@@ -1,0 +1,1441 @@
+npm warn exec The following package was not found and will be installed: tsx@4.22.4
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "actions": {
+      "type": "array",
+      "items": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "_type": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "text": {
+                "$ref": "#/$defs/__schema1"
+              }
+            },
+            "required": [
+              "_type",
+              "text"
+            ],
+            "additionalProperties": false,
+            "title": "Message",
+            "description": "The AI sends a message to the user."
+          },
+          {
+            "type": "object",
+            "properties": {
+              "_type": {
+                "$ref": "#/$defs/__schema2"
+              },
+              "text": {
+                "$ref": "#/$defs/__schema3"
+              }
+            },
+            "required": [
+              "_type",
+              "text"
+            ],
+            "additionalProperties": false,
+            "title": "Think",
+            "description": "The AI describes its intent or reasoning."
+          },
+          {
+            "type": "object",
+            "properties": {
+              "_type": {
+                "$ref": "#/$defs/__schema4"
+              },
+              "intent": {
+                "$ref": "#/$defs/__schema5"
+              },
+              "x": {
+                "$ref": "#/$defs/__schema6"
+              },
+              "y": {
+                "$ref": "#/$defs/__schema7"
+              },
+              "w": {
+                "$ref": "#/$defs/__schema8"
+              },
+              "h": {
+                "$ref": "#/$defs/__schema9"
+              }
+            },
+            "required": [
+              "_type",
+              "intent",
+              "x",
+              "y",
+              "w",
+              "h"
+            ],
+            "additionalProperties": false,
+            "title": "Review",
+            "description": "The AI schedules further work or a review so that it can look at the results of its work so far and take further action, such as reviewing what it has done or taking further steps that would benefit from seeing the results of its work so far."
+          },
+          {
+            "type": "object",
+            "properties": {
+              "_type": {
+                "$ref": "#/$defs/__schema10"
+              },
+              "intent": {
+                "$ref": "#/$defs/__schema11"
+              }
+            },
+            "required": [
+              "_type",
+              "intent"
+            ],
+            "additionalProperties": false,
+            "title": "Add Detail",
+            "description": "The AI plans further work so that it can add detail to its work."
+          },
+          {
+            "type": "object",
+            "properties": {
+              "_type": {
+                "$ref": "#/$defs/__schema12"
+              },
+              "id": {
+                "$ref": "#/$defs/__schema13"
+              },
+              "status": {
+                "$ref": "#/$defs/__schema14"
+              },
+              "text": {
+                "$ref": "#/$defs/__schema15"
+              }
+            },
+            "required": [
+              "_type",
+              "id",
+              "status"
+            ],
+            "additionalProperties": false,
+            "title": "Update Todo List",
+            "description": "The AI updates a current todo list item or creates a new one"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "_type": {
+                "$ref": "#/$defs/__schema16"
+              },
+              "intent": {
+                "$ref": "#/$defs/__schema17"
+              },
+              "x": {
+                "$ref": "#/$defs/__schema18"
+              },
+              "y": {
+                "$ref": "#/$defs/__schema19"
+              },
+              "w": {
+                "$ref": "#/$defs/__schema20"
+              },
+              "h": {
+                "$ref": "#/$defs/__schema21"
+              }
+            },
+            "required": [
+              "_type",
+              "intent",
+              "x",
+              "y",
+              "w",
+              "h"
+            ],
+            "additionalProperties": false,
+            "title": "Set My View",
+            "description": "The AI changes the bounds of its own viewport to navigate to other areas of the canvas if needed."
+          },
+          {
+            "type": "object",
+            "properties": {
+              "_type": {
+                "$ref": "#/$defs/__schema22"
+              },
+              "intent": {
+                "$ref": "#/$defs/__schema23"
+              },
+              "shape": {
+                "$ref": "#/$defs/__schema24"
+              }
+            },
+            "required": [
+              "_type",
+              "intent",
+              "shape"
+            ],
+            "additionalProperties": false,
+            "title": "Create",
+            "description": "The AI creates a new shape."
+          },
+          {
+            "type": "object",
+            "properties": {
+              "_type": {
+                "$ref": "#/$defs/__schema44"
+              },
+              "intent": {
+                "$ref": "#/$defs/__schema45"
+              },
+              "shapeId": {
+                "$ref": "#/$defs/__schema30"
+              }
+            },
+            "required": [
+              "_type",
+              "intent",
+              "shapeId"
+            ],
+            "additionalProperties": false,
+            "title": "Delete",
+            "description": "The AI deletes a shape."
+          },
+          {
+            "type": "object",
+            "properties": {
+              "_type": {
+                "$ref": "#/$defs/__schema46"
+              },
+              "intent": {
+                "$ref": "#/$defs/__schema47"
+              },
+              "update": {
+                "$ref": "#/$defs/__schema24"
+              }
+            },
+            "required": [
+              "_type",
+              "intent",
+              "update"
+            ],
+            "additionalProperties": false,
+            "title": "Update",
+            "description": "The AI updates an existing shape."
+          },
+          {
+            "type": "object",
+            "properties": {
+              "_type": {
+                "$ref": "#/$defs/__schema48"
+              },
+              "intent": {
+                "$ref": "#/$defs/__schema49"
+              },
+              "shapeId": {
+                "$ref": "#/$defs/__schema30"
+              },
+              "text": {
+                "$ref": "#/$defs/__schema50"
+              }
+            },
+            "required": [
+              "_type",
+              "intent",
+              "shapeId",
+              "text"
+            ],
+            "additionalProperties": false,
+            "title": "Label",
+            "description": "The AI changes a shape's text."
+          },
+          {
+            "type": "object",
+            "properties": {
+              "_type": {
+                "$ref": "#/$defs/__schema51"
+              },
+              "intent": {
+                "$ref": "#/$defs/__schema52"
+              },
+              "anchor": {
+                "$ref": "#/$defs/__schema33"
+              },
+              "shapeId": {
+                "$ref": "#/$defs/__schema30"
+              },
+              "x": {
+                "$ref": "#/$defs/__schema53"
+              },
+              "y": {
+                "$ref": "#/$defs/__schema54"
+              }
+            },
+            "required": [
+              "_type",
+              "intent",
+              "anchor",
+              "shapeId",
+              "x",
+              "y"
+            ],
+            "additionalProperties": false,
+            "title": "Move",
+            "description": "The agent moves a shape to a new position."
+          },
+          {
+            "type": "object",
+            "properties": {
+              "_type": {
+                "$ref": "#/$defs/__schema55"
+              },
+              "align": {
+                "$ref": "#/$defs/__schema56"
+              },
+              "alignOffset": {
+                "$ref": "#/$defs/__schema57"
+              },
+              "intent": {
+                "$ref": "#/$defs/__schema58"
+              },
+              "referenceShapeId": {
+                "$ref": "#/$defs/__schema30"
+              },
+              "side": {
+                "$ref": "#/$defs/__schema59"
+              },
+              "sideOffset": {
+                "$ref": "#/$defs/__schema60"
+              },
+              "shapeId": {
+                "$ref": "#/$defs/__schema30"
+              }
+            },
+            "required": [
+              "_type",
+              "align",
+              "alignOffset",
+              "intent",
+              "referenceShapeId",
+              "side",
+              "sideOffset",
+              "shapeId"
+            ],
+            "additionalProperties": false,
+            "title": "Place",
+            "description": "The AI places a shape relative to another shape."
+          },
+          {
+            "type": "object",
+            "properties": {
+              "_type": {
+                "$ref": "#/$defs/__schema61"
+              },
+              "intent": {
+                "$ref": "#/$defs/__schema62"
+              },
+              "shapeIds": {
+                "$ref": "#/$defs/__schema63"
+              }
+            },
+            "required": [
+              "_type",
+              "intent",
+              "shapeIds"
+            ],
+            "additionalProperties": false,
+            "title": "Bring to Front",
+            "description": "The AI brings one or more shapes to the front so that they appear in front of everything else."
+          },
+          {
+            "type": "object",
+            "properties": {
+              "_type": {
+                "$ref": "#/$defs/__schema64"
+              },
+              "intent": {
+                "$ref": "#/$defs/__schema65"
+              },
+              "shapeIds": {
+                "$ref": "#/$defs/__schema66"
+              }
+            },
+            "required": [
+              "_type",
+              "intent",
+              "shapeIds"
+            ],
+            "additionalProperties": false,
+            "title": "Send to Back",
+            "description": "The AI sends one or more shapes to the back so that they appear behind everything else."
+          },
+          {
+            "type": "object",
+            "properties": {
+              "_type": {
+                "$ref": "#/$defs/__schema67"
+              },
+              "centerY": {
+                "$ref": "#/$defs/__schema68"
+              },
+              "degrees": {
+                "$ref": "#/$defs/__schema69"
+              },
+              "intent": {
+                "$ref": "#/$defs/__schema70"
+              },
+              "originX": {
+                "$ref": "#/$defs/__schema71"
+              },
+              "originY": {
+                "$ref": "#/$defs/__schema72"
+              },
+              "shapeIds": {
+                "$ref": "#/$defs/__schema73"
+              }
+            },
+            "required": [
+              "_type",
+              "centerY",
+              "degrees",
+              "intent",
+              "originX",
+              "originY",
+              "shapeIds"
+            ],
+            "additionalProperties": false,
+            "title": "Rotate",
+            "description": "The AI rotates one or more shapes around an origin point."
+          },
+          {
+            "type": "object",
+            "properties": {
+              "_type": {
+                "$ref": "#/$defs/__schema74"
+              },
+              "intent": {
+                "$ref": "#/$defs/__schema75"
+              },
+              "originX": {
+                "$ref": "#/$defs/__schema76"
+              },
+              "originY": {
+                "$ref": "#/$defs/__schema77"
+              },
+              "scaleX": {
+                "$ref": "#/$defs/__schema78"
+              },
+              "scaleY": {
+                "$ref": "#/$defs/__schema79"
+              },
+              "shapeIds": {
+                "$ref": "#/$defs/__schema80"
+              }
+            },
+            "required": [
+              "_type",
+              "intent",
+              "originX",
+              "originY",
+              "scaleX",
+              "scaleY",
+              "shapeIds"
+            ],
+            "additionalProperties": false,
+            "title": "Resize",
+            "description": "The AI resizes one or more shapes, with the resize operation being performed relative to an origin point."
+          },
+          {
+            "type": "object",
+            "properties": {
+              "_type": {
+                "$ref": "#/$defs/__schema81"
+              },
+              "alignment": {
+                "$ref": "#/$defs/__schema82"
+              },
+              "gap": {
+                "$ref": "#/$defs/__schema83"
+              },
+              "intent": {
+                "$ref": "#/$defs/__schema84"
+              },
+              "shapeIds": {
+                "$ref": "#/$defs/__schema85"
+              }
+            },
+            "required": [
+              "_type",
+              "alignment",
+              "gap",
+              "intent",
+              "shapeIds"
+            ],
+            "additionalProperties": false,
+            "title": "Align",
+            "description": "The AI aligns shapes to each other on an axis."
+          },
+          {
+            "type": "object",
+            "properties": {
+              "_type": {
+                "$ref": "#/$defs/__schema86"
+              },
+              "direction": {
+                "$ref": "#/$defs/__schema87"
+              },
+              "intent": {
+                "$ref": "#/$defs/__schema88"
+              },
+              "shapeIds": {
+                "$ref": "#/$defs/__schema89"
+              }
+            },
+            "required": [
+              "_type",
+              "direction",
+              "intent",
+              "shapeIds"
+            ],
+            "additionalProperties": false,
+            "title": "Distribute",
+            "description": "The AI distributes shapes horizontally or vertically."
+          },
+          {
+            "type": "object",
+            "properties": {
+              "_type": {
+                "$ref": "#/$defs/__schema90"
+              },
+              "direction": {
+                "$ref": "#/$defs/__schema91"
+              },
+              "gap": {
+                "$ref": "#/$defs/__schema92"
+              },
+              "intent": {
+                "$ref": "#/$defs/__schema93"
+              },
+              "shapeIds": {
+                "$ref": "#/$defs/__schema94"
+              }
+            },
+            "required": [
+              "_type",
+              "direction",
+              "gap",
+              "intent",
+              "shapeIds"
+            ],
+            "additionalProperties": false,
+            "title": "Stack",
+            "description": "The AI stacks shapes horizontally or vertically. Note that this doesn't align shapes, it only stacks them along one axis."
+          },
+          {
+            "type": "object",
+            "properties": {
+              "_type": {
+                "$ref": "#/$defs/__schema95"
+              }
+            },
+            "required": [
+              "_type"
+            ],
+            "additionalProperties": false,
+            "title": "Clear",
+            "description": "The agent deletes all shapes on the canvas."
+          },
+          {
+            "type": "object",
+            "properties": {
+              "_type": {
+                "$ref": "#/$defs/__schema96"
+              },
+              "shapeId": {
+                "$ref": "#/$defs/__schema30"
+              },
+              "color": {
+                "$ref": "#/$defs/__schema26"
+              },
+              "closed": {
+                "$ref": "#/$defs/__schema97"
+              },
+              "fill": {
+                "$ref": "#/$defs/__schema28"
+              },
+              "intent": {
+                "$ref": "#/$defs/__schema98"
+              },
+              "points": {
+                "$ref": "#/$defs/__schema99"
+              },
+              "style": {
+                "$ref": "#/$defs/__schema100"
+              }
+            },
+            "required": [
+              "_type",
+              "shapeId",
+              "color",
+              "closed",
+              "fill",
+              "intent",
+              "points",
+              "style"
+            ],
+            "additionalProperties": false,
+            "title": "Pen",
+            "description": "The AI draws a freeform line with a pen. This is useful for drawing custom paths that are not available with the other available shapes. The \"smooth\" style will automatically smooth the line between points. The \"straight\" style will render a straight line between points. The \"closed\" property will determine if the drawn line gets automatically closed to form a complete shape or not. Remember that the pen will be *down* until the action is over. If you want to lift up the pen, start a new pen action."
+          },
+          {
+            "type": "object",
+            "properties": {
+              "_type": {
+                "$ref": "#/$defs/__schema101"
+              },
+              "code": {
+                "$ref": "#/$defs/__schema102"
+              }
+            },
+            "required": [
+              "_type",
+              "code"
+            ],
+            "additionalProperties": false,
+            "title": "Country info",
+            "description": "The AI gets information about a country by providing its country code, eg: \"de\" for Germany."
+          },
+          {
+            "type": "object",
+            "properties": {
+              "_type": {
+                "$ref": "#/$defs/__schema103"
+              },
+              "expression": {
+                "$ref": "#/$defs/__schema104"
+              }
+            },
+            "required": [
+              "_type",
+              "expression"
+            ],
+            "additionalProperties": false,
+            "title": "Count",
+            "description": "The AI requests to count the number of shapes in the canvas. The answer will be provided to the AI in a follow-up request."
+          },
+          {
+            "type": "object",
+            "properties": {
+              "_type": {
+                "$ref": "#/$defs/__schema105"
+              }
+            },
+            "required": [
+              "_type"
+            ],
+            "additionalProperties": false,
+            "title": "Unknown",
+            "description": "An action with an unknown or unrecognized type."
+          }
+        ]
+      }
+    }
+  },
+  "required": [
+    "actions"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "__schema0": {
+      "type": "string",
+      "const": "message"
+    },
+    "__schema1": {
+      "type": "string"
+    },
+    "__schema2": {
+      "type": "string",
+      "const": "think"
+    },
+    "__schema3": {
+      "type": "string"
+    },
+    "__schema4": {
+      "type": "string",
+      "const": "review"
+    },
+    "__schema5": {
+      "type": "string"
+    },
+    "__schema6": {
+      "type": "number"
+    },
+    "__schema7": {
+      "type": "number"
+    },
+    "__schema8": {
+      "type": "number"
+    },
+    "__schema9": {
+      "type": "number"
+    },
+    "__schema10": {
+      "type": "string",
+      "const": "add-detail"
+    },
+    "__schema11": {
+      "type": "string"
+    },
+    "__schema12": {
+      "type": "string",
+      "const": "update-todo-list"
+    },
+    "__schema13": {
+      "type": "number"
+    },
+    "__schema14": {
+      "type": "string",
+      "enum": [
+        "todo",
+        "in-progress",
+        "done"
+      ]
+    },
+    "__schema15": {
+      "type": "string"
+    },
+    "__schema16": {
+      "type": "string",
+      "const": "setMyView"
+    },
+    "__schema17": {
+      "type": "string"
+    },
+    "__schema18": {
+      "type": "number"
+    },
+    "__schema19": {
+      "type": "number"
+    },
+    "__schema20": {
+      "type": "number"
+    },
+    "__schema21": {
+      "type": "number"
+    },
+    "__schema22": {
+      "type": "string",
+      "const": "create"
+    },
+    "__schema23": {
+      "type": "string"
+    },
+    "__schema24": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "_type": {
+              "$ref": "#/$defs/__schema25"
+            },
+            "color": {
+              "$ref": "#/$defs/__schema26"
+            },
+            "fill": {
+              "$ref": "#/$defs/__schema27"
+            },
+            "note": {
+              "$ref": "#/$defs/__schema29"
+            },
+            "shapeId": {
+              "$ref": "#/$defs/__schema30"
+            }
+          },
+          "required": [
+            "_type",
+            "color",
+            "note",
+            "shapeId"
+          ],
+          "additionalProperties": false,
+          "title": "Draw Shape",
+          "description": "A draw shape is a freeform shape that was drawn by the pen tool. IMPORTANT: Do not create draw shapes with the \"create\" action. To create new draw shapes, the AI must use the pen event because it gives more control."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "_type": {
+              "type": "string",
+              "enum": [
+                "rectangle",
+                "ellipse",
+                "triangle",
+                "diamond",
+                "hexagon",
+                "pill",
+                "cloud",
+                "x-box",
+                "check-box",
+                "heart",
+                "pentagon",
+                "octagon",
+                "star",
+                "parallelogram-right",
+                "parallelogram-left",
+                "trapezoid",
+                "fat-arrow-right",
+                "fat-arrow-left",
+                "fat-arrow-up",
+                "fat-arrow-down"
+              ]
+            },
+            "color": {
+              "$ref": "#/$defs/__schema26"
+            },
+            "fill": {
+              "$ref": "#/$defs/__schema28"
+            },
+            "h": {
+              "type": "number"
+            },
+            "note": {
+              "type": "string"
+            },
+            "shapeId": {
+              "$ref": "#/$defs/__schema30"
+            },
+            "text": {
+              "$ref": "#/$defs/__schema31"
+            },
+            "textAlign": {
+              "type": "string",
+              "enum": [
+                "start",
+                "middle",
+                "end"
+              ]
+            },
+            "w": {
+              "type": "number"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "_type",
+            "color",
+            "fill",
+            "h",
+            "note",
+            "shapeId",
+            "w",
+            "x",
+            "y"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "_type": {
+              "type": "string",
+              "const": "line"
+            },
+            "color": {
+              "$ref": "#/$defs/__schema26"
+            },
+            "note": {
+              "type": "string"
+            },
+            "shapeId": {
+              "$ref": "#/$defs/__schema30"
+            },
+            "x1": {
+              "type": "number"
+            },
+            "x2": {
+              "type": "number"
+            },
+            "y1": {
+              "type": "number"
+            },
+            "y2": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "_type",
+            "color",
+            "note",
+            "shapeId",
+            "x1",
+            "x2",
+            "y1",
+            "y2"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "_type": {
+              "$ref": "#/$defs/__schema32"
+            },
+            "anchor": {
+              "$ref": "#/$defs/__schema33"
+            },
+            "color": {
+              "$ref": "#/$defs/__schema26"
+            },
+            "fontSize": {
+              "$ref": "#/$defs/__schema34"
+            },
+            "maxWidth": {
+              "$ref": "#/$defs/__schema35"
+            },
+            "note": {
+              "$ref": "#/$defs/__schema36"
+            },
+            "shapeId": {
+              "$ref": "#/$defs/__schema30"
+            },
+            "text": {
+              "$ref": "#/$defs/__schema31"
+            },
+            "x": {
+              "$ref": "#/$defs/__schema37"
+            },
+            "y": {
+              "$ref": "#/$defs/__schema38"
+            }
+          },
+          "required": [
+            "_type",
+            "anchor",
+            "color",
+            "maxWidth",
+            "note",
+            "shapeId",
+            "text",
+            "x",
+            "y"
+          ],
+          "additionalProperties": false,
+          "title": "Text Shape",
+          "description": "A text shape is a shape that contains text. The `anchor` property indicates how the text shape is positioned and aligned. For example, the \"top-left\" anchor means the text shape's x and y coordinates are the top left corner of the text shape, and the text gets left aligned. A shape with the \"bottom-center\" anchor means the text shape's x and y coordinates are the bottom center of the text shape, and the text gets center aligned on the horizontal axis. By default, text shapes auto-size to fit their content. If you provide a `maxWidth`, the text will automatically wrap to the next line if it exceeds that width (there is no need to add manual line breaks for word wrapping)."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "_type": {
+              "type": "string",
+              "const": "arrow"
+            },
+            "color": {
+              "$ref": "#/$defs/__schema26"
+            },
+            "fromId": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/__schema30"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "note": {
+              "type": "string"
+            },
+            "shapeId": {
+              "$ref": "#/$defs/__schema30"
+            },
+            "text": {
+              "type": "string"
+            },
+            "toId": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/__schema30"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "x1": {
+              "type": "number"
+            },
+            "x2": {
+              "type": "number"
+            },
+            "y1": {
+              "type": "number"
+            },
+            "y2": {
+              "type": "number"
+            },
+            "bend": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "_type",
+            "color",
+            "fromId",
+            "note",
+            "shapeId",
+            "toId",
+            "x1",
+            "x2",
+            "y1",
+            "y2"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "_type": {
+              "type": "string",
+              "const": "note"
+            },
+            "color": {
+              "$ref": "#/$defs/__schema26"
+            },
+            "note": {
+              "type": "string"
+            },
+            "shapeId": {
+              "$ref": "#/$defs/__schema30"
+            },
+            "text": {
+              "$ref": "#/$defs/__schema31"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "_type",
+            "color",
+            "note",
+            "shapeId",
+            "x",
+            "y"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "_type": {
+              "$ref": "#/$defs/__schema39"
+            },
+            "note": {
+              "$ref": "#/$defs/__schema40"
+            },
+            "shapeId": {
+              "$ref": "#/$defs/__schema30"
+            },
+            "subType": {
+              "$ref": "#/$defs/__schema41"
+            },
+            "x": {
+              "$ref": "#/$defs/__schema42"
+            },
+            "y": {
+              "$ref": "#/$defs/__schema43"
+            }
+          },
+          "required": [
+            "_type",
+            "note",
+            "shapeId",
+            "subType",
+            "x",
+            "y"
+          ],
+          "additionalProperties": false,
+          "title": "Unknown Shape",
+          "description": "A special shape that is not represented by one of the canvas's core shape types. The AI cannot create these shapes, but it *can* interact with them. eg: The AI can move these shapes. The `subType` property contains the internal name of the shape's type."
+        }
+      ]
+    },
+    "__schema25": {
+      "type": "string",
+      "const": "draw"
+    },
+    "__schema26": {
+      "type": "string",
+      "enum": [
+        "red",
+        "light-red",
+        "green",
+        "light-green",
+        "blue",
+        "light-blue",
+        "orange",
+        "yellow",
+        "black",
+        "violet",
+        "light-violet",
+        "grey",
+        "white"
+      ]
+    },
+    "__schema27": {
+      "$ref": "#/$defs/__schema28"
+    },
+    "__schema28": {
+      "type": "string",
+      "enum": [
+        "none",
+        "tint",
+        "background",
+        "solid",
+        "pattern"
+      ]
+    },
+    "__schema29": {
+      "type": "string"
+    },
+    "__schema30": {
+      "type": "string"
+    },
+    "__schema31": {
+      "type": "string"
+    },
+    "__schema32": {
+      "type": "string",
+      "const": "text"
+    },
+    "__schema33": {
+      "type": "string",
+      "enum": [
+        "bottom-center",
+        "bottom-left",
+        "bottom-right",
+        "center-left",
+        "center-right",
+        "center",
+        "top-center",
+        "top-left",
+        "top-right"
+      ]
+    },
+    "__schema34": {
+      "type": "number"
+    },
+    "__schema35": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "__schema36": {
+      "type": "string"
+    },
+    "__schema37": {
+      "type": "number"
+    },
+    "__schema38": {
+      "type": "number"
+    },
+    "__schema39": {
+      "type": "string",
+      "const": "unknown"
+    },
+    "__schema40": {
+      "type": "string"
+    },
+    "__schema41": {
+      "type": "string"
+    },
+    "__schema42": {
+      "type": "number"
+    },
+    "__schema43": {
+      "type": "number"
+    },
+    "__schema44": {
+      "type": "string",
+      "const": "delete"
+    },
+    "__schema45": {
+      "type": "string"
+    },
+    "__schema46": {
+      "type": "string",
+      "const": "update"
+    },
+    "__schema47": {
+      "type": "string"
+    },
+    "__schema48": {
+      "type": "string",
+      "const": "label"
+    },
+    "__schema49": {
+      "type": "string"
+    },
+    "__schema50": {
+      "type": "string"
+    },
+    "__schema51": {
+      "type": "string",
+      "const": "move"
+    },
+    "__schema52": {
+      "type": "string"
+    },
+    "__schema53": {
+      "type": "number"
+    },
+    "__schema54": {
+      "type": "number"
+    },
+    "__schema55": {
+      "type": "string",
+      "const": "place"
+    },
+    "__schema56": {
+      "type": "string",
+      "enum": [
+        "start",
+        "center",
+        "end"
+      ]
+    },
+    "__schema57": {
+      "type": "number"
+    },
+    "__schema58": {
+      "type": "string"
+    },
+    "__schema59": {
+      "type": "string",
+      "enum": [
+        "top",
+        "bottom",
+        "left",
+        "right"
+      ]
+    },
+    "__schema60": {
+      "type": "number"
+    },
+    "__schema61": {
+      "type": "string",
+      "const": "bringToFront"
+    },
+    "__schema62": {
+      "type": "string"
+    },
+    "__schema63": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/__schema30"
+      }
+    },
+    "__schema64": {
+      "type": "string",
+      "const": "sendToBack"
+    },
+    "__schema65": {
+      "type": "string"
+    },
+    "__schema66": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/__schema30"
+      }
+    },
+    "__schema67": {
+      "type": "string",
+      "const": "rotate"
+    },
+    "__schema68": {
+      "type": "number"
+    },
+    "__schema69": {
+      "type": "number"
+    },
+    "__schema70": {
+      "type": "string"
+    },
+    "__schema71": {
+      "type": "number"
+    },
+    "__schema72": {
+      "type": "number"
+    },
+    "__schema73": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/__schema30"
+      }
+    },
+    "__schema74": {
+      "type": "string",
+      "const": "resize"
+    },
+    "__schema75": {
+      "type": "string"
+    },
+    "__schema76": {
+      "type": "number"
+    },
+    "__schema77": {
+      "type": "number"
+    },
+    "__schema78": {
+      "type": "number"
+    },
+    "__schema79": {
+      "type": "number"
+    },
+    "__schema80": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/__schema30"
+      }
+    },
+    "__schema81": {
+      "type": "string",
+      "const": "align"
+    },
+    "__schema82": {
+      "type": "string",
+      "enum": [
+        "top",
+        "bottom",
+        "left",
+        "right",
+        "center-horizontal",
+        "center-vertical"
+      ]
+    },
+    "__schema83": {
+      "type": "number"
+    },
+    "__schema84": {
+      "type": "string"
+    },
+    "__schema85": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/__schema30"
+      }
+    },
+    "__schema86": {
+      "type": "string",
+      "const": "distribute"
+    },
+    "__schema87": {
+      "type": "string",
+      "enum": [
+        "horizontal",
+        "vertical"
+      ]
+    },
+    "__schema88": {
+      "type": "string"
+    },
+    "__schema89": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/__schema30"
+      }
+    },
+    "__schema90": {
+      "type": "string",
+      "const": "stack"
+    },
+    "__schema91": {
+      "type": "string",
+      "enum": [
+        "vertical",
+        "horizontal"
+      ]
+    },
+    "__schema92": {
+      "type": "number"
+    },
+    "__schema93": {
+      "type": "string"
+    },
+    "__schema94": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/__schema30"
+      }
+    },
+    "__schema95": {
+      "type": "string",
+      "const": "clear"
+    },
+    "__schema96": {
+      "type": "string",
+      "const": "pen"
+    },
+    "__schema97": {
+      "type": "boolean"
+    },
+    "__schema98": {
+      "type": "string"
+    },
+    "__schema99": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "x": {
+            "type": "number"
+          },
+          "y": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "x",
+          "y"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "__schema100": {
+      "type": "string",
+      "enum": [
+        "smooth",
+        "straight"
+      ]
+    },
+    "__schema101": {
+      "type": "string",
+      "const": "countryInfo"
+    },
+    "__schema102": {
+      "type": "string"
+    },
+    "__schema103": {
+      "type": "string",
+      "const": "count"
+    },
+    "__schema104": {
+      "type": "string"
+    },
+    "__schema105": {
+      "type": "string",
+      "const": "unknown"
+    }
+  }
+}
