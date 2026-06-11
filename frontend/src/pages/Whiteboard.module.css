@@ -1,0 +1,143 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.6rem 1.25rem;
+  background: #fff;
+  border-bottom: 1px solid #e0e0ea;
+  flex-shrink: 0;
+}
+
+.backBtn {
+  padding: 0.35rem 0.9rem;
+  border: 1.5px solid #ddd;
+  border-radius: 8px;
+  background: transparent;
+  color: #555;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.backBtn:hover {
+  border-color: #6c47ff;
+  color: #6c47ff;
+}
+
+.title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #222;
+}
+
+.workspace {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.canvas {
+  flex: 1;
+  position: relative;
+}
+
+.agent {
+  width: 320px;
+  flex-shrink: 0;
+  border-left: 1px solid #e0e0ea;
+  display: flex;
+  flex-direction: column;
+  background: #fafafa;
+}
+
+.agentHeader {
+  padding: 0.85rem 1rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #333;
+  border-bottom: 1px solid #e0e0ea;
+  background: #fff;
+}
+
+.messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.userMsg {
+  align-self: flex-end;
+  background: #6c47ff;
+  color: #fff;
+  padding: 0.55rem 0.85rem;
+  border-radius: 12px 12px 2px 12px;
+  font-size: 0.88rem;
+  max-width: 85%;
+  line-height: 1.4;
+}
+
+.agentMsg {
+  align-self: flex-start;
+  background: #fff;
+  color: #333;
+  padding: 0.55rem 0.85rem;
+  border-radius: 12px 12px 12px 2px;
+  font-size: 0.88rem;
+  max-width: 85%;
+  line-height: 1.4;
+  border: 1px solid #e5e5f0;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+
+.inputRow {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border-top: 1px solid #e0e0ea;
+  background: #fff;
+}
+
+.input {
+  flex: 1;
+  padding: 0.55rem 0.75rem;
+  border: 1.5px solid #ddd;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.input:focus {
+  border-color: #6c47ff;
+}
+
+.sendBtn {
+  padding: 0.55rem 1rem;
+  background: #6c47ff;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, opacity 0.2s;
+}
+
+.sendBtn:hover:not(:disabled) {
+  background: #5534e0;
+}
+
+.sendBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
