@@ -21,12 +21,21 @@ export default function SignUp() {
       await register(email, password, fullName);
       navigate('/dashboard');
     } catch (err: any) {
-      const data = err?.response?.data;
-      const msg =
-        data?.email?.[0] ||
-        data?.password?.[0] ||
-        data?.non_field_errors?.[0] ||
-        'Registration failed. Please try again.';
+      let msg: string;
+      if (err?.response) {
+        const data = err.response.data;
+        msg =
+          data?.email?.[0] ||
+          data?.password?.[0] ||
+          data?.non_field_errors?.[0] ||
+          data?.detail ||
+          `Registration failed (HTTP ${err.response.status}).`;
+      } else if (err?.request) {
+        msg =
+          'Cannot reach the server at http://localhost:8000. Is the Django backend running?';
+      } else {
+        msg = err?.message || 'Registration failed.';
+      }
       setError(msg);
     } finally {
       setLoading(false);

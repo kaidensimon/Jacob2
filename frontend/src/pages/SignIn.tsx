@@ -20,7 +20,20 @@ export default function SignIn() {
       await login(email, password);
       navigate('/dashboard');
     } catch (err: any) {
-      const msg = err?.response?.data?.non_field_errors?.[0] || 'Sign in failed. Check your credentials.';
+      let msg: string;
+      if (err?.response) {
+        // Server responded with an error status (e.g. 400 = bad credentials)
+        msg =
+          err.response.data?.non_field_errors?.[0] ||
+          err.response.data?.detail ||
+          `Sign in failed (HTTP ${err.response.status}).`;
+      } else if (err?.request) {
+        // Request was sent but no response — backend down / CORS / wrong URL
+        msg =
+          'Cannot reach the server at http://localhost:8000. Is the Django backend running?';
+      } else {
+        msg = err?.message || 'Sign in failed.';
+      }
       setError(msg);
     } finally {
       setLoading(false);

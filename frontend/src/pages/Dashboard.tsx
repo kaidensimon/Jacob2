@@ -24,7 +24,7 @@ export default function Dashboard() {
 
       <main className={styles.main}>
         <h1 className={styles.heading}>Your Workspace</h1>
-        <p className={styles.sub}>Start a collaborative whiteboard session with AI assistance.</p>
+        <p className={styles.sub}>Open an Excalidraw whiteboard to sketch and diagram.</p>
         <button
           className={styles.startBtn}
           onClick={() => navigate('/whiteboard')}
