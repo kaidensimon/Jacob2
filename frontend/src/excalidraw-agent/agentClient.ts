@@ -12,6 +12,123 @@ import {
 } from './geometry'
 
 const STREAM_URL = 'http://localhost:8000/api/excalidraw/stream/'
+const ORCHESTRATOR_URL = 'http://localhost:8000/api/orchestrator/'
+const MANIM_GENERATE_URL = 'http://localhost:8000/api/manim/generate/'
+const MANIM_SAVE_URL = 'http://localhost:8000/api/manim/save/'
+
+const authHeaders = () => ({
+  'Content-Type': 'application/json',
+  Authorization: `Bearer ${localStorage.getItem('access_token') ?? ''}`,
+})
+
+export interface AnimationResult {
+  id: number
+  title: string
+  videoUrl: string
+}
+
+/** Generate (and render) a Manim animation for a topic. Can take a minute. */
+export async function generateAnimation(
+  task: string,
+  signal: AbortSignal
+): Promise<AnimationResult> {
+  const res = await fetch(MANIM_GENERATE_URL, {
+    method: 'POST',
+    body: JSON.stringify({ task }),
+    headers: authHeaders(),
+    signal,
+  })
+  if (!res.ok) {
+    let detail = `Animation failed (HTTP ${res.status})`
+    try {
+      const data = await res.json()
+      if (data?.error) detail = data.error
+    } catch {
+      // keep generic
+    }
+    throw new Error(detail)
+  }
+  return (await res.json()) as AnimationResult
+}
+
+/** Read a graphable equation/surface out of an image using vision. */
+export async function readEquationFromImage(
+  imageDataUrl: string,
+  signal: AbortSignal
+): Promise<{ dimension: '2d' | '3d'; expressions: string[]; message?: string }> {
+  const res = await fetch('http://localhost:8000/api/grapher/read-image/', {
+    method: 'POST',
+    body: JSON.stringify({ image: imageDataUrl }),
+    headers: authHeaders(),
+    signal,
+  })
+  if (!res.ok) {
+    let detail = `Image read failed (HTTP ${res.status})`
+    try {
+      const d = await res.json()
+      if (d?.error) detail = d.error
+    } catch {
+      // keep generic
+    }
+    throw new Error(detail)
+  }
+  const d = await res.json()
+  return {
+    dimension: d.dimension === '3d' ? '3d' : '2d',
+    expressions: d.expressions || [],
+    message: d.message,
+  }
+}
+
+/** Persist a generated animation to the user's library. */
+export async function saveAnimation(id: number, title?: string): Promise<void> {
+  const res = await fetch(MANIM_SAVE_URL, {
+    method: 'POST',
+    body: JSON.stringify({ id, title }),
+    headers: authHeaders(),
+  })
+  if (!res.ok) throw new Error(`Save failed (HTTP ${res.status})`)
+}
+
+export interface OrchestratorDecision {
+  action: 'chat' | 'ask' | 'whiteboard' | 'manim' | 'grapher'
+  message?: string
+  task?: string
+  // For action 'grapher':
+  dimension?: '2d' | '3d'
+  expressions?: string[]
+  source?: 'whiteboard' // the equation to plot is on the whiteboard, not in the message
+}
+
+/**
+ * Ask the reasoning orchestrator what to do with a user message. It receives
+ * ONLY the message + conversation history (no canvas context), and returns a
+ * routing decision.
+ */
+export async function orchestrate(
+  message: string,
+  history: { role: 'user' | 'assistant'; text: string }[],
+  signal: AbortSignal
+): Promise<OrchestratorDecision> {
+  const token = localStorage.getItem('access_token') ?? ''
+  const res = await fetch(ORCHESTRATOR_URL, {
+    method: 'POST',
+    body: JSON.stringify({ message, history }),
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    signal,
+  })
+  if (!res.ok) {
+    let detail = `Orchestrator failed (HTTP ${res.status})`
+    try {
+      const data = await res.json()
+      if (data?.error) detail = data.error
+    } catch {
+      // keep generic
+    }
+    throw new Error(detail)
+  }
+  return (await res.json()) as OrchestratorDecision
+}
 
 export interface BlurryShape {
   id: string

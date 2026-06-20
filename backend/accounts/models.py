@@ -32,3 +32,38 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.email
+
+
+class WhiteboardSession(models.Model):
+    """A saved Excalidraw whiteboard. `scene` holds the JSON (elements +
+    appState + files); `thumbnail` is a small PNG preview for the library."""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='whiteboards')
+    title = models.CharField(max_length=255)
+    scene = models.TextField()
+    thumbnail = models.FileField(upload_to='whiteboards/', blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-updated_at']
+
+    def __str__(self):
+        return f'{self.title} ({self.user.email})'
+
+
+class Animation(models.Model):
+    """A Manim animation generated for a user. Created on every generation;
+    `saved` flips to True only if the user chooses to keep it."""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='animations')
+    title = models.CharField(max_length=255)
+    prompt = models.TextField(blank=True)
+    code = models.TextField(blank=True)
+    video = models.FileField(upload_to='animations/')
+    saved = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.title} ({self.user.email})'

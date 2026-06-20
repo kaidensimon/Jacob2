@@ -39,12 +39,24 @@ try {
   await page.fill('.ex-chat-input textarea', PROMPT)
   await page.click('.ex-chat-send')
 
-  // 4. Wait for generation to start, then finish (Stop button is shown while busy)
+  // 4. Wait for the orchestrator/agent to respond.
   await page.waitForSelector('.ex-chat-stop', { timeout: 25000 })
-  log('agent working…')
-  const started = Date.now()
+  log('working…')
+  let started = Date.now()
   await page.waitForSelector('.ex-chat-stop', { state: 'detached', timeout: 300000 })
-  log(`agent finished in ${Math.round((Date.now() - started) / 1000)}s`)
+  log(`first response in ${Math.round((Date.now() - started) / 1000)}s`)
+
+  // If the orchestrator asked whiteboard-vs-video, answer "whiteboard".
+  const lastMsg = (await page.locator('.ex-row-message').allInnerTexts()).pop() || ''
+  if (/whiteboard/i.test(lastMsg) && /video|anim/i.test(lastMsg)) {
+    log('orchestrator asked medium → answering "whiteboard"')
+    await page.fill('.ex-chat-input textarea', 'whiteboard')
+    await page.click('.ex-chat-send')
+    await page.waitForSelector('.ex-chat-stop', { timeout: 25000 })
+    started = Date.now()
+    await page.waitForSelector('.ex-chat-stop', { state: 'detached', timeout: 300000 })
+    log(`agent drew in ${Math.round((Date.now() - started) / 1000)}s`)
+  }
 
   // 5. Deselect everything (so the properties panel closes), zoom to fit, shoot.
   await page.waitForTimeout(1200)

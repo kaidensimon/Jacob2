@@ -96,3 +96,5 @@ export type ChatItem =
   | { kind: 'message'; text: string }
   | { kind: 'action'; text: string }
   | { kind: 'error'; text: string }
+  | { kind: 'video'; url: string; title: string }
+  | { kind: 'save-prompt'; animationId: number; title: string }

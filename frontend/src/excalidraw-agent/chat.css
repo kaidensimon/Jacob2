@@ -100,6 +100,86 @@
   font-size: 12px;
 }
 
+/* Grapher buttons */
+.ex-grapher-bar {
+  display: flex;
+  gap: 8px;
+  padding: 8px 14px;
+  border-bottom: 1px solid #efefef;
+  flex-shrink: 0;
+}
+.ex-grapher-btn {
+  flex: 1;
+  border: 1px solid #e2e2ea;
+  background: #f7f7ff;
+  border-radius: 8px;
+  padding: 7px 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #4a3fb0;
+  cursor: pointer;
+}
+.ex-grapher-btn:hover {
+  background: #efebff;
+  border-color: #6c47ff;
+}
+
+/* Animation video */
+.ex-row-video {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px 0;
+}
+.ex-video-title {
+  font-weight: 600;
+  font-size: 12px;
+  color: #1b1b1f;
+}
+.ex-video {
+  width: 100%;
+  border-radius: 10px;
+  background: #000;
+  display: block;
+}
+
+/* Save prompt */
+.ex-row-save {
+  align-self: stretch;
+  background: #f1f0fb;
+  border-radius: 10px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ex-save-q {
+  font-size: 12.5px;
+  color: #1b1b1f;
+}
+.ex-save-actions {
+  display: flex;
+  gap: 8px;
+}
+.ex-save-yes,
+.ex-save-no {
+  border: none;
+  border-radius: 8px;
+  padding: 6px 18px;
+  font-weight: 600;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.ex-save-yes {
+  background: #6965db;
+  color: #fff;
+}
+.ex-save-no {
+  background: #e9e9ef;
+  color: #1b1b1f;
+}
+
 .ex-chat-thinking {
   align-self: flex-start;
   color: #9a9aa2;

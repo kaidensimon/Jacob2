@@ -1,21 +1,25 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Excalidraw, MainMenu, WelcomeScreen } from '@excalidraw/excalidraw'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Excalidraw, MainMenu, WelcomeScreen, exportToBlob } from '@excalidraw/excalidraw'
 import type { ExcalidrawElement } from '@excalidraw/excalidraw/element/types'
 import type { AppState, ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types'
 import '@excalidraw/excalidraw/index.css'
 import { useAuth } from '../context/AuthContext'
+import apiClient from '../api'
 import { ChatPanel } from '../excalidraw-agent/ChatPanel'
 import { useExcalidrawAgent } from '../excalidraw-agent/useExcalidrawAgent'
+import { GrapherModal } from '../grapher/GrapherModal'
+import { GrapherBoundary } from '../grapher/GrapherBoundary'
 
 const STORAGE_KEY = 'excalidraw-session'
 
 type SavedScene = {
   elements: readonly ExcalidrawElement[]
   appState: Partial<AppState>
+  files?: any
 }
 
-function loadScene(): SavedScene | undefined {
+function loadLocalScene(): SavedScene | undefined {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return undefined
@@ -23,21 +27,77 @@ function loadScene(): SavedScene | undefined {
     return {
       elements: data.elements ?? [],
       appState: { ...(data.appState ?? {}), collaborators: [] },
+      files: data.files,
     }
   } catch {
     return undefined
   }
 }
 
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader()
+    r.onloadend = () => resolve(r.result as string)
+    r.onerror = reject
+    r.readAsDataURL(blob)
+  })
+}
+
 export default function Whiteboard() {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const sessionId = searchParams.get('session')
   const saveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   const [api, setApi] = useState<ExcalidrawImperativeAPI | null>(null)
-  const [initialData] = useState<SavedScene | undefined>(() => loadScene())
+  const [initialData, setInitialData] = useState<SavedScene | undefined>(undefined)
+  const [loaded, setLoaded] = useState(false)
+  // The saved-session identity (id is set once it's been saved to the account).
+  const [session, setSession] = useState<{ id?: number; title: string }>({
+    title: 'Untitled whiteboard',
+  })
+  const [grapher, setGrapher] = useState<
+    { mode: '2d' | '3d'; expressions?: string[]; key: number } | null
+  >(null)
+  const grapherKey = useRef(0)
 
-  const agent = useExcalidrawAgent(api)
+  const openGrapher = useCallback(
+    (mode: '2d' | '3d', expressions?: string[]) =>
+      setGrapher({ mode, expressions, key: grapherKey.current++ }),
+    []
+  )
+
+  const agent = useExcalidrawAgent(api, openGrapher)
+
+  // Load the scene: from the account if ?session=<id>, else from localStorage.
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      if (sessionId) {
+        try {
+          const res = await apiClient.get(`/whiteboards/${sessionId}/`)
+          if (cancelled) return
+          const { id, title, scene } = res.data
+          setInitialData({
+            elements: scene.elements ?? [],
+            appState: { ...(scene.appState ?? {}), collaborators: [] },
+            files: scene.files,
+          })
+          setSession({ id, title })
+        } catch {
+          if (!cancelled) setInitialData(loadLocalScene())
+        }
+      } else {
+        setInitialData(loadLocalScene())
+      }
+      if (!cancelled) setLoaded(true)
+    }
+    load()
+    return () => {
+      cancelled = true
+    }
+  }, [sessionId])
 
   const handleChange = useCallback(
     (elements: readonly ExcalidrawElement[], appState: AppState) => {
@@ -58,11 +118,80 @@ export default function Whiteboard() {
     []
   )
 
+  // Save the current canvas to the user's account (with a thumbnail).
+  const saveToAccount = useCallback(
+    async (asNew: boolean) => {
+      if (!api) return
+      const defaultTitle = asNew ? '' : session.title
+      const title = window.prompt('Name this whiteboard:', defaultTitle)
+      if (title === null) return // cancelled
+
+      const elements = api.getSceneElements()
+      const appState = api.getAppState()
+      const files = api.getFiles()
+
+      let thumbnail: string | undefined
+      try {
+        if (elements.length > 0) {
+          const blob = await exportToBlob({
+            elements,
+            appState: { ...appState, exportBackground: true },
+            files,
+            mimeType: 'image/png',
+            exportPadding: 16,
+            getDimensions: (w, h) => {
+              const max = 480
+              const s = Math.min(1, max / Math.max(w, h))
+              return { width: w * s, height: h * s, scale: s }
+            },
+          })
+          thumbnail = await blobToDataUrl(blob)
+        }
+      } catch {
+        thumbnail = undefined
+      }
+
+      const { collaborators, ...persistableAppState } = appState
+      void collaborators
+      const scene = { elements, appState: persistableAppState, files }
+
+      try {
+        const res = await apiClient.post('/whiteboards/save/', {
+          id: asNew ? undefined : session.id,
+          title: title.trim() || 'Untitled whiteboard',
+          scene,
+          thumbnail,
+        })
+        setSession({ id: res.data.id, title: res.data.title })
+        api.setToast({ message: `Saved “${res.data.title}”`, duration: 2500 })
+      } catch {
+        api.setToast({ message: 'Could not save whiteboard', duration: 3000 })
+      }
+    },
+    [api, session]
+  )
+
   useEffect(() => () => clearTimeout(saveTimer.current), [])
 
   if (!user) {
     navigate('/signin')
     return null
+  }
+  if (!loaded) {
+    return (
+      <div
+        style={{
+          position: 'fixed',
+          inset: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#666',
+        }}
+      >
+        Loading whiteboard…
+      </div>
+    )
   }
 
   return (
@@ -84,6 +213,22 @@ export default function Whiteboard() {
             >
               Back to Dashboard
             </MainMenu.Item>
+            <MainMenu.Separator />
+            <MainMenu.Item
+              onSelect={() => saveToAccount(false)}
+              icon={
+                <span style={{ fontSize: 14, lineHeight: 1 }} aria-hidden>
+                  💾
+                </span>
+              }
+            >
+              {session.id ? 'Save whiteboard' : 'Save to my account'}
+            </MainMenu.Item>
+            {session.id && (
+              <MainMenu.Item onSelect={() => saveToAccount(true)}>
+                Save as a copy
+              </MainMenu.Item>
+            )}
             <MainMenu.Separator />
             <MainMenu.DefaultItems.SaveAsImage />
             <MainMenu.DefaultItems.ClearCanvas />
@@ -108,8 +253,20 @@ export default function Whiteboard() {
           onSend={agent.sendMessage}
           onStop={agent.stop}
           onNewChat={agent.newChat}
+          onSaveAnimation={agent.respondToSavePrompt}
+          onOpenGrapher={openGrapher}
         />
       </div>
+
+      {grapher && (
+        <GrapherBoundary key={grapher.key} onClose={() => setGrapher(null)}>
+          <GrapherModal
+            mode={grapher.mode}
+            initialExpressions={grapher.expressions}
+            onClose={() => setGrapher(null)}
+          />
+        </GrapherBoundary>
+      )}
     </div>
   )
 }

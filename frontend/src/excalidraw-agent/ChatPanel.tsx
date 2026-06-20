@@ -9,9 +9,19 @@ interface Props {
   onSend: (text: string) => void
   onStop: () => void
   onNewChat: () => void
+  onSaveAnimation: (animationId: number, title: string, save: boolean) => void
+  onOpenGrapher: (mode: '2d' | '3d') => void
 }
 
-export function ChatPanel({ chat, isGenerating, onSend, onStop, onNewChat }: Props) {
+export function ChatPanel({
+  chat,
+  isGenerating,
+  onSend,
+  onStop,
+  onNewChat,
+  onSaveAnimation,
+  onOpenGrapher,
+}: Props) {
   const [value, setValue] = useState('')
   const historyRef = useRef<HTMLDivElement>(null)
 
@@ -37,6 +47,15 @@ export function ChatPanel({ chat, isGenerating, onSend, onStop, onNewChat }: Pro
         </button>
       </div>
 
+      <div className="ex-grapher-bar">
+        <button className="ex-grapher-btn" onClick={() => onOpenGrapher('2d')}>
+          📈 2D Graph
+        </button>
+        <button className="ex-grapher-btn" onClick={() => onOpenGrapher('3d')}>
+          🧊 3D Graph
+        </button>
+      </div>
+
       <div className="ex-chat-history" ref={historyRef}>
         {chat.length === 0 && (
           <div className="ex-chat-empty">
@@ -46,7 +65,7 @@ export function ChatPanel({ chat, isGenerating, onSend, onStop, onNewChat }: Pro
           </div>
         )}
         {chat.map((item, i) => (
-          <ChatRow key={i} item={item} />
+          <ChatRow key={i} item={item} onSaveAnimation={onSaveAnimation} />
         ))}
         {isGenerating && <div className="ex-chat-thinking">Thinking…</div>}
       </div>
@@ -80,7 +99,13 @@ export function ChatPanel({ chat, isGenerating, onSend, onStop, onNewChat }: Pro
   )
 }
 
-function ChatRow({ item }: { item: ChatItem }) {
+function ChatRow({
+  item,
+  onSaveAnimation,
+}: {
+  item: ChatItem
+  onSaveAnimation: (animationId: number, title: string, save: boolean) => void
+}) {
   switch (item.kind) {
     case 'user':
       return <div className="ex-row ex-row-user">{item.text}</div>
@@ -96,5 +121,32 @@ function ChatRow({ item }: { item: ChatItem }) {
       )
     case 'error':
       return <div className="ex-row ex-row-error">{item.text}</div>
+    case 'video':
+      return (
+        <div className="ex-row ex-row-video">
+          <div className="ex-video-title">{item.title}</div>
+          <video className="ex-video" src={item.url} controls preload="metadata" />
+        </div>
+      )
+    case 'save-prompt':
+      return (
+        <div className="ex-row ex-row-save">
+          <div className="ex-save-q">Do you want to save this animation for future reference?</div>
+          <div className="ex-save-actions">
+            <button
+              className="ex-save-yes"
+              onClick={() => onSaveAnimation(item.animationId, item.title, true)}
+            >
+              Yes
+            </button>
+            <button
+              className="ex-save-no"
+              onClick={() => onSaveAnimation(item.animationId, item.title, false)}
+            >
+              No
+            </button>
+          </div>
+        </div>
+      )
   }
 }

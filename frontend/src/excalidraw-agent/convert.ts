@@ -16,6 +16,23 @@ export interface Bounds {
 const DEFAULT_W = 160
 const DEFAULT_H = 80
 
+/**
+ * Excalidraw's hand-drawn font is missing glyphs for a few math symbols, which
+ * render as garbage (∫→"°", √→"Ã", ≠→"-", ∞→"°"). Everything else — ∂ ∇ ∑ ∏ ∮
+ * ≤ ≥ ± × · ∈ ∪ ∩, Greek, ² ³, → — renders fine, so we only patch these four,
+ * swapping each for a substitute that DOES render hand-drawn. This runs only on
+ * text bound for the CANVAS; the chat message (normal DOM font) is left intact.
+ */
+function fixCanvasGlyphs(text: string): string {
+  return text
+    .replace(/∫/g, 'ſ') // ∫ single integral → ſ (long-s; looks like an integral)
+    .replace(/√\s*\(/g, 'sqrt(') // √( … ) → sqrt( … )
+    .replace(/√\s*([A-Za-z0-9]+)/g, 'sqrt($1)') // √x / √162 → sqrt(x) / sqrt(162)
+    .replace(/√/g, 'sqrt') // any stray √ → sqrt
+    .replace(/≠/g, '≢') // ≠ (drops its slash) → ≢ (renders, reads "not equal")
+    .replace(/∞/g, 'inf') // ∞ → inf (no hand-drawn glyph)
+}
+
 function agentBounds(shape: AgentShape): Bounds {
   return {
     x: shape.x ?? 0,
@@ -73,7 +90,7 @@ export function buildSkeletons(
           y: shape.y ?? 0,
           width: shape.width ?? DEFAULT_W,
           height: shape.height ?? DEFAULT_H,
-          ...(shape.text ? { label: { text: shape.text } } : {}),
+          ...(shape.text ? { label: { text: fixCanvasGlyphs(shape.text) } } : {}),
           ...commonStyle(shape),
         })
         break
@@ -85,7 +102,7 @@ export function buildSkeletons(
           id: shape.id,
           x: shape.x ?? 0,
           y: shape.y ?? 0,
-          text: shape.text ?? '',
+          text: fixCanvasGlyphs(shape.text ?? ''),
           ...(shape.fontSize ? { fontSize: shape.fontSize } : {}),
           ...(shape.strokeColor ? { strokeColor: shape.strokeColor } : {}),
         })
@@ -131,7 +148,7 @@ export function buildSkeletons(
           }
         }
 
-        if (shape.type === 'arrow' && shape.text) sk.label = { text: shape.text }
+        if (shape.type === 'arrow' && shape.text) sk.label = { text: fixCanvasGlyphs(shape.text) }
         skeletons.push(sk)
         break
       }

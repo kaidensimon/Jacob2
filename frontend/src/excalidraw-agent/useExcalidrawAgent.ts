@@ -2,7 +2,14 @@ import { useCallback, useRef, useState } from 'react'
 import type { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types'
 import { shapesToElements } from './convert'
 import type { Bounds } from './convert'
-import { gatherContext, streamAgent } from './agentClient'
+import {
+  gatherContext,
+  generateAnimation,
+  orchestrate,
+  readEquationFromImage,
+  saveAnimation,
+  streamAgent,
+} from './agentClient'
 import { detectOverlaps } from './detect'
 import {
   type Box,
@@ -60,7 +67,10 @@ function buildCritiquePrompt(request: string, issues: string[]): string {
   )
 }
 
-export function useExcalidrawAgent(api: ExcalidrawImperativeAPI | null) {
+export function useExcalidrawAgent(
+  api: ExcalidrawImperativeAPI | null,
+  onOpenGrapher?: (mode: '2d' | '3d', expressions?: string[]) => void
+) {
   const [chat, setChat] = useState<ChatItem[]>([])
   const [isGenerating, setIsGenerating] = useState(false)
 
@@ -78,6 +88,8 @@ export function useExcalidrawAgent(api: ExcalidrawImperativeAPI | null) {
   const mutatedRef = useRef(false)
   // The user's camera when the turn started — restored when the agent finishes.
   const userViewRef = useRef<{ scrollX: number; scrollY: number; zoom: any } | null>(null)
+  // A pending "which whiteboard item do you want plotted?" question.
+  const pendingGrapherRef = useRef<PendingGrapher | null>(null)
 
   const MAX_REVIEW_PASSES = 6
 
@@ -331,27 +343,117 @@ export function useExcalidrawAgent(api: ExcalidrawImperativeAPI | null) {
     [api, handleAction]
   )
 
+  // Read the equation text off the given whiteboard elements, convert it into
+  // grapher expressions (via the orchestrator), and open the grapher.
+  const plotFromElements = useCallback(
+    async (els: any[], signal: AbortSignal) => {
+      if (!api) return
+      const all = api.getSceneElements()
+      const text = els
+        .map((e) => elementText(e, all))
+        .filter(Boolean)
+        .join('; ')
+
+      // No text? If they selected an image, read the equation from it with vision.
+      if (!text.trim()) {
+        const imageEl = els.find((e) => e.type === 'image' && e.fileId)
+        if (imageEl) {
+          const file = (api.getFiles() as any)?.[imageEl.fileId]
+          const dataUrl: string | undefined = file?.dataURL
+          if (dataUrl) {
+            push({ kind: 'message', text: 'Reading the equation from the image…' })
+            try {
+              const res = await readEquationFromImage(dataUrl, signal)
+              if (res.expressions.length) {
+                push({ kind: 'message', text: `Plotting from the image: ${res.expressions.join(', ')}` })
+                onOpenGrapher?.(res.dimension, res.expressions)
+              } else {
+                push({
+                  kind: 'message',
+                  text: res.message || "I couldn't find a graphable equation in that image.",
+                })
+              }
+            } catch (err: any) {
+              if (err?.name !== 'AbortError') {
+                push({ kind: 'error', text: err?.message || 'Could not read that image.' })
+              }
+            }
+            return
+          }
+        }
+        push({
+          kind: 'message',
+          text: "I couldn't read an equation from that. What would you like me to plot?",
+        })
+        return
+      }
+      try {
+        const decision = await orchestrate(`graph this equation: ${text}`, [], signal)
+        if (decision.action === 'grapher' && decision.expressions?.length) {
+          push({ kind: 'message', text: `Plotting: ${text}` })
+          onOpenGrapher?.(decision.dimension === '3d' ? '3d' : '2d', decision.expressions)
+        } else {
+          push({
+            kind: 'message',
+            text: `I couldn't turn “${truncate(text, 60)}” into a graph. Try giving me the equation directly.`,
+          })
+        }
+      } catch (err: any) {
+        if (err?.name !== 'AbortError') {
+          push({ kind: 'error', text: err?.message || 'Could not plot that.' })
+        }
+      }
+    },
+    [api, push, onOpenGrapher]
+  )
+
+  // The user asked to plot "this"/something from the whiteboard but gave no
+  // equation. Figure out what they mean from selection / canvas contents.
+  const resolveWhiteboardPlot = useCallback(
+    async (signal: AbortSignal) => {
+      if (!api) return
+      const all = api.getSceneElements().filter((e) => !e.isDeleted)
+      const appState = api.getAppState()
+      const selIds = Object.keys(appState.selectedElementIds || {}).filter(
+        (id) => appState.selectedElementIds[id]
+      )
+      const selected = all.filter((e) => selIds.includes(e.id) && !e.containerId)
+      const things = all.filter((e) => !e.containerId)
+
+      if (selected.length > 0) {
+        pendingGrapherRef.current = { type: 'confirm', elementIds: selected.map((e) => e.id) }
+        push({
+          kind: 'message',
+          text: `You currently have ${describeSelection(selected, all)} selected. Do you mean to plot this? (yes / no)`,
+        })
+        return
+      }
+      if (things.length === 0) {
+        push({
+          kind: 'message',
+          text: "There's nothing on the whiteboard to plot yet. Add an equation, or just tell me one.",
+        })
+        return
+      }
+      if (things.length === 1) {
+        await plotFromElements(things, signal)
+        return
+      }
+      pendingGrapherRef.current = { type: 'choose' }
+      push({
+        kind: 'message',
+        text: 'There are several things on the whiteboard. Which one should I plot? Select it on the canvas (then say "this one"), or just tell me the equation.',
+      })
+    },
+    [api, push, plotFromElements]
+  )
+
   const sendMessage = useCallback(
     async (text: string) => {
       if (!api || !text.trim() || isGenerating) return
 
       push({ kind: 'user', text })
       setIsGenerating(true)
-
-      // Forget any agent shapes the user deleted before this prompt, so they
-      // aren't resurrected when the agent renders again.
-      reconcileDeleted()
-
-      // Stable chat origin for this turn: the viewport top-left right now.
-      const startState = api.getAppState()
-      const vp = getViewportBounds(startState)
-      originRef.current = { x: vp.x, y: vp.y }
-      // Remember the user's camera so we can restore it after the agent roams.
-      userViewRef.current = {
-        scrollX: startState.scrollX,
-        scrollY: startState.scrollY,
-        zoom: startState.zoom,
-      }
 
       const baseHistory = chat
         .filter((c) => c.kind === 'user' || c.kind === 'message')
@@ -362,17 +464,121 @@ export function useExcalidrawAgent(api: ExcalidrawImperativeAPI | null) {
 
       const controller = new AbortController()
       abortRef.current = controller
+      userViewRef.current = null
 
       try {
+        // 0. If we asked which whiteboard item to plot, interpret this reply.
+        const pending = pendingGrapherRef.current
+        if (pending) {
+          if (pending.type === 'confirm') {
+            if (isAffirmative(text)) {
+              pendingGrapherRef.current = null
+              const all = api.getSceneElements()
+              await plotFromElements(
+                all.filter((e) => pending.elementIds.includes(e.id)),
+                controller.signal
+              )
+              return
+            }
+            if (isNegative(text)) {
+              pendingGrapherRef.current = { type: 'choose' }
+              push({
+                kind: 'message',
+                text: 'No problem — what on the whiteboard would you like me to plot? Select it (then say "this one"), or tell me the equation.',
+              })
+              return
+            }
+            // Ambiguous reply — drop the pending question and treat it normally.
+            pendingGrapherRef.current = null
+          } else {
+            // 'choose' — did they select something on the canvas now?
+            pendingGrapherRef.current = null
+            const appState = api.getAppState()
+            const selIds = Object.keys(appState.selectedElementIds || {}).filter(
+              (id) => appState.selectedElementIds[id]
+            )
+            if (selIds.length > 0) {
+              const all = api.getSceneElements()
+              await plotFromElements(
+                all.filter((e) => selIds.includes(e.id) && !e.containerId),
+                controller.signal
+              )
+              return
+            }
+            // Otherwise fall through — they may have typed the equation directly.
+          }
+        }
+
+        // 1. Reasoning orchestrator decides what to do. It gets ONLY the message
+        //    + conversation history — no canvas context (that would waste tokens).
+        const decision = await orchestrate(text, baseHistory, controller.signal)
+
+        if (decision.action === 'grapher') {
+          // The equation lives on the whiteboard (no equation was given) — figure
+          // out which item they mean from selection / canvas contents.
+          if (decision.source === 'whiteboard' || !decision.expressions?.length) {
+            await resolveWhiteboardPlot(controller.signal)
+            return
+          }
+          // Equation provided — open the grapher with it.
+          push({
+            kind: 'message',
+            text:
+              decision.message ||
+              `Opening the ${decision.dimension === '3d' ? '3D' : '2D'} grapher with your equation.`,
+          })
+          onOpenGrapher?.(decision.dimension === '3d' ? '3d' : '2d', decision.expressions)
+          return
+        }
+
+        if (decision.action === 'manim') {
+          // Animation agent: generate + render a Manim video, show it in chat.
+          const task = decision.task || text
+          push({
+            kind: 'message',
+            text: `Animating "${task}" — reasoning about the best way to show it and rendering the video. This can take a few minutes for richer topics…`,
+          })
+          const result = await generateAnimation(task, controller.signal)
+          push({ kind: 'video', url: result.videoUrl, title: result.title })
+          push({ kind: 'save-prompt', animationId: result.id, title: result.title })
+          return
+        }
+
+        if (decision.action !== 'whiteboard') {
+          // chat / ask → just reply in the chat; no drawing.
+          push({
+            kind: 'message',
+            text: decision.message || 'Done.',
+          })
+          return
+        }
+
+        // 2. Whiteboard agent flow — NOW we inject the full canvas context.
+        const task = decision.task || text
+
+        // Forget any agent shapes the user deleted before this prompt.
+        reconcileDeleted()
+
+        // Stable chat origin for this turn: the viewport top-left right now.
+        const startState = api.getAppState()
+        const vp = getViewportBounds(startState)
+        originRef.current = { x: vp.x, y: vp.y }
+        // Remember the user's camera so we can restore it after the agent roams.
+        userViewRef.current = {
+          scrollX: startState.scrollX,
+          scrollY: startState.scrollY,
+          zoom: startState.zoom,
+        }
+
         reviewRequestedRef.current = false
-        await runTurn(text, baseHistory, controller.signal)
+        await runTurn(task, baseHistory, controller.signal)
 
         // Critique passes. The detector now only flags OBJECTIVE readability
         // problems (text-on-text, text-on-arrow, arrows through shapes — never
         // intentional nesting), so we drive the loop with it: keep cleaning up
         // while real problems remain OR the model wants another look. A stall
         // guard stops us spinning on something that isn't improving.
-        const reviewHistory = [...baseHistory, { role: 'user' as const, text }]
+        const reviewHistory = [...baseHistory, { role: 'user' as const, text: task }]
         let prevIssues = Infinity
         let stalls = 0
         for (let pass = 0; pass < MAX_REVIEW_PASSES; pass++) {
@@ -405,7 +611,7 @@ export function useExcalidrawAgent(api: ExcalidrawImperativeAPI | null) {
                 ? `Cleaning up ${issues.length} readability issue${issues.length > 1 ? 's' : ''}…`
                 : 'Reviewing the layout for clarity and balance…',
           })
-          await runTurn(buildCritiquePrompt(text, issues), reviewHistory, controller.signal, issues)
+          await runTurn(buildCritiquePrompt(task, issues), reviewHistory, controller.signal, issues)
         }
       } catch (err: any) {
         if (err?.name !== 'AbortError') {
@@ -427,12 +633,43 @@ export function useExcalidrawAgent(api: ExcalidrawImperativeAPI | null) {
         abortRef.current = null
       }
     },
-    [api, chat, isGenerating, push, runTurn, reconcileDeleted]
+    [
+      api,
+      chat,
+      isGenerating,
+      push,
+      runTurn,
+      reconcileDeleted,
+      onOpenGrapher,
+      plotFromElements,
+      resolveWhiteboardPlot,
+    ]
   )
 
   const stop = useCallback(() => {
     abortRef.current?.abort()
   }, [])
+
+  // Respond to the "save this animation?" prompt.
+  const respondToSavePrompt = useCallback(
+    async (animationId: number, title: string, save: boolean) => {
+      // Remove the prompt (its buttons) from the chat.
+      setChat((prev) =>
+        prev.filter((c) => !(c.kind === 'save-prompt' && c.animationId === animationId))
+      )
+      if (save) {
+        try {
+          await saveAnimation(animationId, title)
+          push({ kind: 'message', text: `Saved "${title}" to your library.` })
+        } catch {
+          push({ kind: 'error', text: 'Could not save the animation.' })
+        }
+      } else {
+        push({ kind: 'message', text: "Okay — I won't save it." })
+      }
+    },
+    [push]
+  )
 
   const newChat = useCallback(() => {
     abortRef.current?.abort()
@@ -441,7 +678,7 @@ export function useExcalidrawAgent(api: ExcalidrawImperativeAPI | null) {
     setChat([])
   }, [])
 
-  return { chat, isGenerating, sendMessage, stop, newChat }
+  return { chat, isGenerating, sendMessage, stop, newChat, respondToSavePrompt }
 }
 
 function describeCreate(shape: AgentShape): string {
@@ -451,4 +688,57 @@ function describeCreate(shape: AgentShape): string {
   }
   const label = shape.text ? ` “${shape.text}”` : ''
   return `Drew ${shape.type}${label}`
+}
+
+// ── Whiteboard "plot this" resolution helpers ────────────────────────────────
+
+type PendingGrapher =
+  | { type: 'confirm'; elementIds: string[] }
+  | { type: 'choose' }
+
+const AFFIRMATIVE = /^\s*(y|ye|yes|yeah|yep|yup|sure|ok|okay|correct|right|do it|plot( it)?|that one|this one|the selected one)\b/i
+const NEGATIVE = /^\s*(n|no|nope|nah|not|don'?t|incorrect|wrong|other)\b/i
+
+function isAffirmative(s: string): boolean {
+  return AFFIRMATIVE.test(s.trim())
+}
+function isNegative(s: string): boolean {
+  return NEGATIVE.test(s.trim())
+}
+
+function colorName(hex?: string): string {
+  if (!hex) return ''
+  const map: Record<string, string> = {
+    '#1e1e1e': 'black', '#e03131': 'red', '#2f9e44': 'green', '#1971c2': 'blue',
+    '#f08c00': 'orange', '#9c36b5': 'purple', '#ae3ec9': 'purple', '#e64980': 'pink',
+  }
+  return map[hex.toLowerCase()] || ''
+}
+
+function readableType(t: string): string {
+  if (t === 'freedraw' || t === 'draw') return 'drawing'
+  return t
+}
+
+function elementText(el: any, all: readonly any[]): string {
+  if (typeof el.text === 'string' && el.text) return el.text
+  const child = all.find((c) => c.type === 'text' && c.containerId === el.id)
+  return (child && child.text) || ''
+}
+
+function truncate(s: string, n = 40): string {
+  const one = s.replace(/\s+/g, ' ').trim()
+  return one.length > n ? one.slice(0, n - 1) + '…' : one
+}
+
+function describeSelection(els: any[], all: readonly any[]): string {
+  if (els.length === 1) {
+    const e = els[0]
+    const txt = elementText(e, all)
+    if (e.type === 'text') return txt ? `the text “${truncate(txt)}”` : 'the text element'
+    const c = colorName(e.strokeColor)
+    const base = `the ${c ? c + ' ' : ''}${readableType(e.type)}`
+    return txt ? `${base} labeled “${truncate(txt)}”` : base
+  }
+  return `the ${els.length} selected items`
 }
