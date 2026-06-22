@@ -7,7 +7,6 @@ import {
   type Vec,
   boxIntersects,
   clusterShapes,
-  getViewportBounds,
   roundBox,
 } from './geometry'
 
@@ -177,10 +176,14 @@ const offsetBox = (b: Box, origin: Vec): Box => ({
  */
 export async function gatherContext(
   api: ExcalidrawImperativeAPI,
-  origin: Vec
+  origin: Vec,
+  viewport: Box,
+  // The region the agent SEES (screenshot + which shapes count as in-view).
+  // Defaults to `viewport`, but when there's a selection it's wider than the
+  // clear drawing area so the agent can see the selected content too.
+  screenshotView: Box = viewport
 ): Promise<AgentContext> {
   const appState = api.getAppState()
-  const viewport = getViewportBounds(appState)
 
   const all = api.getSceneElements().filter((el) => !el.isDeleted)
 
@@ -201,7 +204,7 @@ export async function gatherContext(
   const outside: typeof content = []
   for (const el of content) {
     const box: Box = { x: el.x, y: el.y, w: el.width, h: el.height }
-    if (boxIntersects(box, viewport)) inViewport.push(el)
+    if (boxIntersects(box, screenshotView)) inViewport.push(el)
     else outside.push(el)
   }
 
@@ -209,8 +212,12 @@ export async function gatherContext(
   const blurryShapes: BlurryShape[] = inViewport.map((el) => {
     const b = roundBox(offsetBox({ x: el.x, y: el.y, w: el.width, h: el.height }, origin))
     const ownText = (el as any).text
+    const latex = (el as any).customData?.latex as string | undefined
     const text =
-      (typeof ownText === 'string' && ownText) || labelByContainer.get(el.id) || undefined
+      (latex ? `math: ${latex}` : '') ||
+      (typeof ownText === 'string' && ownText) ||
+      labelByContainer.get(el.id) ||
+      undefined
     return { id: el.id, type: el.type, x: b.x, y: b.y, w: b.w, h: b.h, text }
   })
 
@@ -228,10 +235,10 @@ export async function gatherContext(
     (id) => appState.selectedElementIds[id]
   )
 
-  // Screenshot what the agent is actually looking at (its viewport), so when it
-  // zooms in via setMyView the image zooms in with it.
+  // Screenshot what the agent is actually looking at, so when it zooms in via
+  // setMyView the image zooms in with it (and it sees any selected content).
   const visibleEls = all.filter((el) =>
-    boxIntersects({ x: el.x, y: el.y, w: el.width, h: el.height }, viewport)
+    boxIntersects({ x: el.x, y: el.y, w: el.width, h: el.height }, screenshotView)
   )
   let screenshot: string | undefined
   if (visibleEls.length > 0) {

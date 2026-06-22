@@ -25,6 +25,9 @@ const DEFAULT_H = 80
  */
 function fixCanvasGlyphs(text: string): string {
   return text
+    // Model sometimes double-escapes Greek/symbols in a label, e.g. literal
+    // "ρ" instead of ρ. Decode those escape sequences back to the character.
+    .replace(/\\u([0-9a-fA-F]{4})/g, (_m, h) => String.fromCharCode(parseInt(h, 16)))
     .replace(/∫/g, 'ſ') // ∫ single integral → ſ (long-s; looks like an integral)
     .replace(/√\s*\(/g, 'sqrt(') // √( … ) → sqrt( … )
     .replace(/√\s*([A-Za-z0-9]+)/g, 'sqrt($1)') // √x / √162 → sqrt(x) / sqrt(162)
@@ -105,6 +108,24 @@ export function buildSkeletons(
           text: fixCanvasGlyphs(shape.text ?? ''),
           ...(shape.fontSize ? { fontSize: shape.fontSize } : {}),
           ...(shape.strokeColor ? { strokeColor: shape.strokeColor } : {}),
+        })
+        break
+      }
+
+      case 'math': {
+        // Only renderable once the client has rasterized the LaTeX to a file.
+        if (!shape.fileId) break
+        skeletons.push({
+          type: 'image',
+          id: shape.id,
+          x: shape.x ?? 0,
+          y: shape.y ?? 0,
+          width: shape.width ?? DEFAULT_W,
+          height: shape.height ?? DEFAULT_H,
+          fileId: shape.fileId,
+          status: 'saved',
+          // Carry the LaTeX so the agent can read its own equations on review.
+          customData: { latex: shape.latex ?? shape.text ?? '' },
         })
         break
       }

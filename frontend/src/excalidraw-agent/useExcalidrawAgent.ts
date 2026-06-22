@@ -11,15 +11,23 @@ import {
   streamAgent,
 } from './agentClient'
 import { detectOverlaps } from './detect'
+import { renderLatexToImage } from './mathRender'
 import {
   type Box,
   type Vec,
   alignBoxes,
-  boxIntersects,
+  boxExpandBy,
+  boxUnion,
+  contentBounds,
   distributeBoxes,
   getViewportBounds,
   stackBoxes,
 } from './geometry'
+
+// The agent has a name and its own independent viewport (shown as an overlay),
+// like tldraw's agent. It draws in empty space away from the user's content and
+// never moves the user's camera.
+export const AGENT_NAME = 'Jacob'
 import type { AgentAction, AgentShape, ChatItem } from './types'
 
 // Let Excalidraw finish rendering/measuring before we screenshot or measure.
@@ -86,10 +94,24 @@ export function useExcalidrawAgent(
   const reviewRequestedRef = useRef(false)
   // Set when a pass actually changed the canvas (used to know when to stop).
   const mutatedRef = useRef(false)
-  // The user's camera when the turn started — restored when the agent finishes.
-  const userViewRef = useRef<{ scrollX: number; scrollY: number; zoom: any } | null>(null)
+  // The agent's OWN viewport (absolute scene coords) — independent of the user's
+  // camera. It's where the agent looks/draws; rendered as a "Jacob's view"
+  // overlay. `agentView` is the state mirror so the overlay re-renders.
+  const agentViewRef = useRef<Box | null>(null)
+  // The agent's CLEAR drawing area (its coordinate viewport). Reported as
+  // "(0,0)..(w,h)" — distinct from agentViewRef, which can be wider (to include
+  // the user's selection) or moved by setMyView for inspection.
+  const drawAreaRef = useRef<Box | null>(null)
+  const [agentView, setAgentViewState] = useState<Box | null>(null)
+  const setAgentView = useCallback((box: Box | null) => {
+    agentViewRef.current = box
+    setAgentViewState(box)
+  }, [])
   // A pending "which whiteboard item do you want plotted?" question.
   const pendingGrapherRef = useRef<PendingGrapher | null>(null)
+  // In-flight LaTeX→image renders for `math` shapes (awaited before we
+  // screenshot / run the overlap detector so the canvas is settled).
+  const pendingRendersRef = useRef<Promise<void>[]>([])
 
   const MAX_REVIEW_PASSES = 6
 
@@ -143,6 +165,101 @@ export function useExcalidrawAgent(
     mutatedRef.current = true
   }, [api])
 
+  // Render a `math` shape's LaTeX to an image, register it as an Excalidraw
+  // file, and stamp the shape with its fileId + measured size so it renders.
+  const startMathRender = useCallback(
+    (shape: AgentShape) => {
+      if (!api) return
+      const latex = (shape.latex ?? shape.text ?? '').trim()
+      if (!latex) return
+      const p = (async () => {
+        try {
+          const { dataUrl, width, height } = await renderLatexToImage(latex, {
+            fontSize: shape.fontSize ?? 20,
+            color: shape.strokeColor || '#1e1e1e',
+          })
+          const cur = shapesRef.current.get(shape.id)
+          if (!cur) return // user/agent deleted it while we were rendering
+          const fileId = `math-${shape.id}`
+          api.addFiles([
+            {
+              id: fileId as any,
+              mimeType: 'image/png',
+              dataURL: dataUrl as any,
+              created: Date.now(),
+              lastRetrieved: Date.now(),
+            } as any,
+          ])
+          shapesRef.current.set(shape.id, { ...cur, fileId, width, height })
+          applyToCanvas()
+        } catch (err) {
+          console.error('math render failed', err)
+        }
+      })()
+      pendingRendersRef.current.push(p)
+    },
+    [api, applyToCanvas]
+  )
+
+  // Wait for any in-flight LaTeX renders to finish (and land on the canvas).
+  const flushMathRenders = useCallback(async () => {
+    const ps = pendingRendersRef.current
+    pendingRendersRef.current = []
+    if (ps.length) await Promise.allSettled(ps)
+  }, [])
+
+  // Decide WHERE the agent draws and WHAT it looks at:
+  //  - origin: top-left of its clear drawing area (its coords are relative to it)
+  //  - view:   the region it screenshots / shows as "Jacob's view"
+  // If the user has a SELECTION, the agent must SEE it: we draw in clear space
+  // just to the right of the selection and frame the view to include BOTH, so
+  // the screenshot + shape list contain the selected content (to the agent's
+  // left, at negative x). Otherwise we draw to the right of all content.
+  const computePlacement = useCallback((): { origin: Vec; drawArea: Box; view: Box } => {
+    const fallback = { x: 0, y: 0, w: 1000, h: 750 }
+    if (!api) return { origin: { x: 0, y: 0 }, drawArea: fallback, view: fallback }
+    const appState = api.getAppState()
+    const userVp = getViewportBounds(appState)
+    const w = Math.max(700, Math.round(userVp.w))
+    const h = Math.max(520, Math.round(userVp.h))
+    const all = api.getSceneElements().filter((e) => !e.isDeleted)
+    const toBox = (e: any): Box => ({ x: e.x, y: e.y, w: e.width, h: e.height })
+    const GAP = 160
+
+    const selIds = Object.keys(appState.selectedElementIds || {}).filter(
+      (id) => (appState.selectedElementIds as any)[id]
+    )
+    const selected = all.filter((e) => selIds.includes(e.id) && !(e as any).containerId)
+    const selBox = contentBounds(selected.map(toBox))
+    if (selBox) {
+      // Draw in the clear area to the right of the selection; SEE both.
+      const drawArea = { x: Math.round(selBox.x + selBox.w + GAP), y: Math.round(selBox.y), w, h }
+      return { origin: { x: drawArea.x, y: drawArea.y }, drawArea, view: boxUnion(selBox, drawArea) }
+    }
+
+    const content = contentBounds(all.map(toBox))
+    const region = content
+      ? { x: Math.round(content.x + content.w + GAP), y: Math.round(content.y), w, h }
+      : { x: Math.round(userVp.x), y: Math.round(userVp.y), w, h }
+    return { origin: { x: region.x, y: region.y }, drawArea: region, view: region }
+  }, [api])
+
+  // Pan the USER's camera to center the agent's viewport (the only time we move
+  // the user's camera — and only when they ask to, via the "go to" affordance).
+  const goToAgentView = useCallback(() => {
+    if (!api || !agentViewRef.current) return
+    const v = agentViewRef.current
+    const appState = api.getAppState()
+    const zoom = appState.zoom?.value ?? 1
+    const width = appState.width ?? window.innerWidth
+    const height = appState.height ?? window.innerHeight
+    const cx = v.x + v.w / 2
+    const cy = v.y + v.h / 2
+    api.updateScene({
+      appState: { scrollX: width / (2 * zoom) - cx, scrollY: height / (2 * zoom) - cy },
+    })
+  }, [api])
+
   // Apply a Map<id, position> from a layout action to the agent's shapes.
   const applyPositions = useCallback(
     (positions: Map<string, Vec>) => {
@@ -182,7 +299,8 @@ export function useExcalidrawAgent(
             if (typeof shape.y === 'number') abs.y = shape.y + origin.y
             shapesRef.current.set(shape.id, abs)
             push({ kind: 'action', text: describeCreate(shape) })
-            applyToCanvas()
+            if (abs.type === 'math') startMathRender(abs)
+            else applyToCanvas()
           }
           break
         }
@@ -195,8 +313,19 @@ export function useExcalidrawAgent(
               const patch: Partial<AgentShape> = { ...shape }
               if (typeof shape.x === 'number') patch.x = shape.x + origin.x
               if (typeof shape.y === 'number') patch.y = shape.y + origin.y
-              shapesRef.current.set(shape.id, { ...existing, ...patch })
+              const merged = { ...existing, ...patch }
+              shapesRef.current.set(shape.id, merged)
               push({ kind: 'action', text: `Updated ${shape.id}` })
+              if (
+                merged.type === 'math' &&
+                (patch.latex !== undefined ||
+                  patch.text !== undefined ||
+                  patch.fontSize !== undefined ||
+                  patch.strokeColor !== undefined)
+              ) {
+                startMathRender(merged)
+                break
+              }
               applyToCanvas()
             }
           }
@@ -275,32 +404,34 @@ export function useExcalidrawAgent(
         }
 
         case 'setMyView': {
+          // Move the agent's OWN viewport (the "Jacob's view" box) — NOT the
+          // user's camera. The next screenshot is framed to this region.
           if (!api) break
           const scene = api.getSceneElements().filter((e) => !e.isDeleted)
-          let targets = scene
+          const toBox = (e: any): Box => ({ x: e.x, y: e.y, w: e.width, h: e.height })
+          let box: Box | null = null
           let label = '🔭 Zoomed out to review the whole drawing'
           if (action.ids?.length) {
             const want = new Set(action.ids)
-            targets = scene.filter((e) => want.has(e.id))
-            label = `🔍 Zoomed in to inspect ${targets.length} shape${targets.length > 1 ? 's' : ''}`
+            box = contentBounds(scene.filter((e) => want.has(e.id)).map(toBox))
+            if (box) box = boxExpandBy(box, 80)
+            label = `🔍 Zoomed in to inspect ${action.ids.length} shape${action.ids.length > 1 ? 's' : ''}`
           } else if (action.bounds) {
-            const b: Box = {
+            box = {
               x: action.bounds.x + origin.x,
               y: action.bounds.y + origin.y,
               w: action.bounds.w,
               h: action.bounds.h,
             }
-            targets = scene.filter((e) =>
-              boxIntersects({ x: e.x, y: e.y, w: e.width, h: e.height }, b)
-            )
             label = '🔍 Zoomed in to take a closer look'
+          } else {
+            // Zoom out to fit everything the agent has drawn.
+            const mine = scene.filter((e) => agentElementIdsRef.current.has(e.id))
+            box = contentBounds((mine.length ? mine : scene).map(toBox))
+            if (box) box = boxExpandBy(box, 100)
           }
-          if (targets.length > 0) {
-            api.scrollToContent(targets, {
-              fitToViewport: true,
-              viewportZoomFactor: 0.8,
-              animate: false,
-            })
+          if (box) {
+            setAgentView(box)
             push({ kind: 'action', text: label })
           }
           break
@@ -312,7 +443,7 @@ export function useExcalidrawAgent(
           break
       }
     },
-    [api, applyToCanvas, applyPositions, boundsOfId, push]
+    [api, applyToCanvas, applyPositions, boundsOfId, push, startMathRender, setAgentView]
   )
 
   // Run one request/response turn against the agent.
@@ -324,7 +455,13 @@ export function useExcalidrawAgent(
       issues?: string[]
     ) => {
       await settle()
-      const ctx = await gatherContext(api!, originRef.current)
+      await flushMathRenders()
+      const fallback = computePlacement()
+      const drawArea = drawAreaRef.current ?? fallback.drawArea
+      const view = agentViewRef.current ?? fallback.view
+      // Report the clear draw area as the agent's viewport (so it draws where its
+      // work stays visible); screenshot the wider view so it sees the selection.
+      const ctx = await gatherContext(api!, originRef.current, drawArea, view)
       await streamAgent(
         {
           messages: [message],
@@ -340,7 +477,7 @@ export function useExcalidrawAgent(
         signal
       )
     },
-    [api, handleAction]
+    [api, handleAction, flushMathRenders, computePlacement]
   )
 
   // Read the equation text off the given whiteboard elements, convert it into
@@ -464,7 +601,8 @@ export function useExcalidrawAgent(
 
       const controller = new AbortController()
       abortRef.current = controller
-      userViewRef.current = null
+      // Clear the previous "Jacob's view" overlay when a new message starts.
+      setAgentView(null)
 
       try {
         // 0. If we asked which whiteboard item to plot, interpret this reply.
@@ -559,16 +697,18 @@ export function useExcalidrawAgent(
         // Forget any agent shapes the user deleted before this prompt.
         reconcileDeleted()
 
-        // Stable chat origin for this turn: the viewport top-left right now.
-        const startState = api.getAppState()
-        const vp = getViewportBounds(startState)
-        originRef.current = { x: vp.x, y: vp.y }
-        // Remember the user's camera so we can restore it after the agent roams.
-        userViewRef.current = {
-          scrollX: startState.scrollX,
-          scrollY: startState.scrollY,
-          zoom: startState.zoom,
-        }
+        // Give the agent its OWN viewport: it draws in clear space (origin),
+        // never on the user's content or camera, but its view is framed to
+        // INCLUDE the user's selection so it actually looks at what they
+        // referenced. The "Jacob's view" overlay shows where it's working.
+        const placement = computePlacement()
+        originRef.current = placement.origin
+        drawAreaRef.current = placement.drawArea
+        setAgentView(placement.view)
+        api.setToast({
+          message: `✏️ ${AGENT_NAME} is drawing nearby — open “${AGENT_NAME}'s view” to follow`,
+          duration: 4000,
+        })
 
         reviewRequestedRef.current = false
         await runTurn(task, baseHistory, controller.signal)
@@ -585,6 +725,7 @@ export function useExcalidrawAgent(
           if (controller.signal.aborted) break
 
           await settle()
+          await flushMathRenders()
           const issues = detectOverlaps(api.getSceneElements())
           const wantsReview = reviewRequestedRef.current
 
@@ -618,17 +759,9 @@ export function useExcalidrawAgent(
           push({ kind: 'error', text: err?.message || 'Something went wrong.' })
         }
       } finally {
-        // Return the camera to where the user left it.
-        const uv = userViewRef.current
-        if (uv) {
-          try {
-            api.updateScene({
-              appState: { scrollX: uv.scrollX, scrollY: uv.scrollY, zoom: uv.zoom },
-            })
-          } catch {
-            // ignore
-          }
-        }
+        // We never moved the user's camera, so there's nothing to restore. The
+        // "Jacob's view" overlay stays up (showing where it drew) until the
+        // user's next message or until they go there.
         setIsGenerating(false)
         abortRef.current = null
       }
@@ -643,6 +776,8 @@ export function useExcalidrawAgent(
       onOpenGrapher,
       plotFromElements,
       resolveWhiteboardPlot,
+      computePlacement,
+      setAgentView,
     ]
   )
 
@@ -675,10 +810,21 @@ export function useExcalidrawAgent(
     abortRef.current?.abort()
     shapesRef.current = new Map()
     agentElementIdsRef.current = new Set()
+    setAgentView(null)
     setChat([])
-  }, [])
+  }, [setAgentView])
 
-  return { chat, isGenerating, sendMessage, stop, newChat, respondToSavePrompt }
+  return {
+    chat,
+    isGenerating,
+    sendMessage,
+    stop,
+    newChat,
+    respondToSavePrompt,
+    agentView,
+    agentName: AGENT_NAME,
+    goToAgentView,
+  }
 }
 
 function describeCreate(shape: AgentShape): string {
@@ -686,6 +832,7 @@ function describeCreate(shape: AgentShape): string {
     if (shape.fromId && shape.toId) return `Arrow ${shape.fromId} → ${shape.toId}`
     return 'Drew an arrow'
   }
+  if (shape.type === 'math') return 'Typeset an equation'
   const label = shape.text ? ` “${shape.text}”` : ''
   return `Drew ${shape.type}${label}`
 }

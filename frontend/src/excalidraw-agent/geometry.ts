@@ -57,6 +57,14 @@ export function roundBox(b: Box): Box {
   }
 }
 
+/** The union bounding box of a set of boxes, or null if empty. */
+export function contentBounds(boxes: Box[]): Box | null {
+  if (boxes.length === 0) return null
+  let r = boxes[0]
+  for (let i = 1; i < boxes.length; i++) r = boxUnion(r, boxes[i])
+  return r
+}
+
 // ── Viewport ─────────────────────────────────────────────────────────────────
 
 /**

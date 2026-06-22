@@ -128,7 +128,26 @@ export function detectOverlaps(elements: readonly any[]): string[] {
   for (const e of elements) {
     if (e.isDeleted) continue
     if (e.type === 'image') {
-      images.push({ id: e.id, x: e.x, y: e.y, w: Math.max(1, e.width), h: Math.max(1, e.height) })
+      const isMath = String((e as any).fileId ?? '').startsWith('math-')
+      if (isMath) {
+        // The agent's own typeset-math image. Treat it like a text block so
+        // collisions with other equations/labels are caught — but DON'T add it to
+        // the "protected image" list, so a header above or a background box
+        // behind it stays allowed.
+        const latex = (e as any).customData?.latex
+        texts.push({
+          id: e.id,
+          label: typeof latex === 'string' && latex ? `equation ${short(latex)}` : 'an equation',
+          x: e.x,
+          y: e.y,
+          w: Math.max(1, e.width),
+          h: Math.max(1, e.height),
+          cx: e.x + e.width / 2,
+          cy: e.y + e.height / 2,
+        })
+      } else {
+        images.push({ id: e.id, x: e.x, y: e.y, w: Math.max(1, e.width), h: Math.max(1, e.height) })
+      }
     } else if (e.type === 'text') {
       texts.push({
         id: e.id,

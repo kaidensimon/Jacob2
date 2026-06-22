@@ -8,6 +8,7 @@ import { useAuth } from '../context/AuthContext'
 import apiClient from '../api'
 import { ChatPanel } from '../excalidraw-agent/ChatPanel'
 import { useExcalidrawAgent } from '../excalidraw-agent/useExcalidrawAgent'
+import { AgentViewOverlay } from '../excalidraw-agent/AgentViewOverlay'
 import { GrapherModal } from '../grapher/GrapherModal'
 import { GrapherBoundary } from '../grapher/GrapherBoundary'
 
@@ -196,7 +197,7 @@ export default function Whiteboard() {
 
   return (
     <div className="ex-layout">
-      <div className="ex-canvas">
+      <div className="ex-canvas" style={{ position: 'relative' }}>
         <Excalidraw
           excalidrawAPI={setApi}
           initialData={initialData}
@@ -244,6 +245,48 @@ export default function Whiteboard() {
             </WelcomeScreen.Center>
           </WelcomeScreen>
         </Excalidraw>
+
+        <AgentViewOverlay
+          api={api}
+          view={agent.agentView}
+          name={agent.agentName}
+          onGoto={agent.goToAgentView}
+        />
+        {agent.agentView && (
+          <button
+            onClick={agent.goToAgentView}
+            style={{
+              position: 'absolute',
+              bottom: 18,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              zIndex: 5,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 7,
+              background: '#1e1e1e',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 8,
+              padding: '8px 14px',
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: 'pointer',
+              boxShadow: '0 2px 10px rgba(0,0,0,0.25)',
+            }}
+          >
+            <span
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                background: '#51cf66',
+                display: 'inline-block',
+              }}
+            />
+            Go to {agent.agentName}'s view ↗
+          </button>
+        )}
       </div>
 
       <div className="ex-sidebar">

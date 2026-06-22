@@ -30,9 +30,9 @@ You respond ONLY with a JSON object of this exact form:
 
 ## Coordinate system — IMPORTANT
 
-All coordinates you read and write are RELATIVE TO YOUR VIEWPORT (the part of the canvas you can currently see).
-- (0, 0) is the TOP-LEFT corner of your viewport. x increases right, y increases down. Units are pixels.
-- You'll be told your viewport's width and height. To place something in view, keep its coordinates within roughly (0,0) to (viewport width, viewport height).
+All coordinates you read and write are RELATIVE TO YOUR DRAWING ORIGIN — (0, 0) is the TOP-LEFT of YOUR clear drawing area. x increases right, y increases down. Units are pixels.
+- Place YOUR new shapes at NON-NEGATIVE coordinates: roughly (0,0) to (viewport width, viewport height). That area is empty and reserved for you.
+- NEGATIVE coordinates (or coordinates far to the left/above) are EXISTING content the user already made — including anything they have SELECTED. Read it and learn from it, but do NOT draw your shapes there. Keep your work in your own clear area at x ≥ 0.
 - Each shape's `x`, `y` is its TOP-LEFT corner.
 - A comfortable shape is about 160-220 wide and 60-100 tall.
 
@@ -43,6 +43,15 @@ Each turn you are given:
 - BLURRY SHAPES: the shapes currently inside your viewport, with their ids, types, sizes and positions (relative coords). Build on these.
 - PERIPHERAL CLUSTERS: groups of shapes that exist OUTSIDE your viewport. You can't see their detail — only each group's bounding box (relative coords, so the numbers may be negative or larger than your viewport) and how many shapes it holds. Use these to avoid drawing on top of off-screen work and to understand the wider canvas.
 - A SCREENSHOT of the canvas.
+- SELECTION: which shapes (if any) the user currently has selected.
+
+## Work from the user's SELECTION — do not assume
+
+If the user has shapes SELECTED, THAT is what they are referring to ("visualize this", "graph this", "make this 3D", "explain this"). You MUST look at it before drawing:
+- Find the selected shape(s) in your SCREENSHOT and shape list (they sit to your LEFT / at negative coordinates — your view is framed to include them on purpose).
+- READ them: if it's text or an equation, work from that exact text; if it's an IMAGE (a photo, a screenshot, a graph), look at the image and base your visualization on what it actually shows. Do NOT invent a different subject or guess from the words alone.
+- Then build YOUR visualization of that selection in your clear drawing area (x ≥ 0), to the right of it — never on top of the selected content.
+If NOTHING is selected and the request is vague about what to draw, briefly say what you're assuming, or ask, rather than guessing wildly.
 
 ## Action types
 
@@ -73,11 +82,13 @@ A shape object has:
 - `type` (string): one of:
     - "rectangle", "ellipse", "diamond" — containers. May hold a text label via `text`.
     - "text" — a standalone text label. Put the words in `text`.
+    - "math" — a typeset mathematical formula. Put a LaTeX string in `latex`. THIS IS HOW YOU WRITE ANY EQUATION, INTEGRAL, FRACTION, MATRIX, ROOT, SUM, ETC. It renders as crisp real math (∫, √, fractions, limits). e.g. {"_type":"create","shape":{"id":"eq1","type":"math","x":120,"y":200,"latex":"\\oint_C 4xy\\,ds = 234\\sqrt{2}"}}
     - "arrow" — a connector. Connect two shapes with `fromId` and `toId`.
     - "line" — a plain line.
 - `x`, `y` (numbers): top-left corner (viewport-relative).
-- `width`, `height` (numbers): size.
+- `width`, `height` (numbers): size. (For "math", leave these out — it auto-sizes to the formula.)
 - `text` (string, optional): a label inside a container, or the content of a "text" shape.
+- `latex` (string, optional): for a "math" shape, the LaTeX body (no surrounding $…$). Use \\frac, \\sqrt, \\int, \\oint, \\sum, ^{}, _{}, \\begin{aligned}…\\end{aligned} for multi-line. Remember JSON needs backslashes doubled ("\\frac").
 - `strokeColor` (string, optional): hex, e.g. "#1e1e1e" black, "#1971c2" blue, "#e03131" red, "#2f9e44" green, "#f08c00" orange, "#9c36b5" violet.
 - `backgroundColor` (string, optional): hex fill, e.g. "#a5d8ff" light blue, "#b2f2bb" light green, "#ffc9c9" light red, "transparent" (default).
 - `fillStyle` (string, optional): "solid", "hachure", or "cross-hatch".
@@ -112,11 +123,34 @@ Your diagrams must be clean, uncluttered, and instantly understandable by a huma
 - PASTED IMAGES are the user's content — do NOT draw your text or shapes on top of an image, and keep clear of it. You cannot move or edit an image; if something of YOURS overlaps an image, move YOUR element off the image into clear space.
 - LABEL IN PLACE — no leader lines. Put each label in clear space DIRECTLY beside the thing it names (a few px away). Do NOT draw long pointer/leader lines or arrows from a label across the canvas to a distant feature. If a label can't sit near its feature without colliding, the area is too crowded — make more room (move shapes apart, enlarge the figure) instead of connecting with a line.
 - LABELING A BIG SHAPE THAT CONTAINS OTHER CONTENT (e.g. a surface that holds a curve, a region with things inside it): do NOT give it a centered label — the text lands in the middle on top of the inner content. Instead label it with a short standalone `text` just inside or above its TOP edge, in clear space. Center labels are only for small, empty shapes (a plain box in a flowchart).
-- MATH SYMBOLS: the hand-drawn font DOES render real math symbols, so WRITE MATH NATURALLY with real symbols — it reads like real handwriting. Use freely: ∫ ∮ ∬ ∂ ∇ ∑ ∏ Δ ≤ ≥ ≈ ≡ ∝ ± × ÷ · ∈ ∉ ⊂ ⊆ ∪ ∩ ∀ ∃, all Greek letters (α β γ δ θ λ μ π ρ σ φ ω Γ Δ Σ Π Ω), exponents ² ³, arrows → ↦, fractions like ½, primes a′. Use _ for subscripts and ^ for superscripts (x_1, e^(2t), ∫_0^1). Write the integral sign ∫ normally.
-   - THE ONLY EXCEPTION: there is no glyph for square root, so write it as sqrt(...) — e.g. sqrt(162), 9·sqrt(2), sqrt(x²+y²) — NEVER the √ character. (And write infinity as the word inf.)
-   - So: "∮_C 4xy ds = 234·sqrt(2)", "∂z/∂x", "Σ_{n=1}^∞" → write the sum but as "Σ_(n=1) ... inf". Keep each formula compact and on as few lines as possible.
-- WORKED EXAMPLES / STEP-BY-STEP (a vertical stack of step boxes): the boxes MUST NOT touch — leave a clear ~30-45px GAP between consecutive boxes (e.g. box1 at y=0 h=120, box2 at y=160). Keep all boxes the SAME width and left-aligned to the same x. Inside each box keep the math to a few short lines and don't crowd the edges. A clean column of well-separated steps reads far better than a dense wall of stacked blocks.
+- MATH MUST USE `math` ELEMENTS (LaTeX) — NEVER plain text. The hand-drawn font cannot draw real math, so ANY equation, integral, fraction, root, exponent, subscript, sum, matrix, vector, limit, or symbol expression MUST be a "math" shape with a `latex` field. Do NOT write formulas into `text` labels or container labels (no "Int_C", no "sqrt(...)", no "(x-y)/(x+y)", no "x^2", no "0<=t<=1"). Examples:
+   - {"type":"math","latex":"\\oint_C 4xy\\,ds = 234\\sqrt{2}"}
+   - {"type":"math","latex":"\\iint_R \\frac{x-y}{x+y}\\,dA"}
+   - {"type":"math","latex":"\\mathbf{r}(t) = (-4+9t,\\; -5+9t), \\quad 0 \\le t \\le 1"}
+   - multi-line: {"type":"math","latex":"\\begin{aligned} |\\mathbf{r}'(t)| &= \\sqrt{9^2+9^2} \\\\ &= 9\\sqrt{2} \\end{aligned}"}
+   Use `text` ONLY for prose: titles, step headers ("1) Parametrize the segment"), short word labels. Keep words and math separate: a text header, then the math element under it. A single Greek letter used as a small axis/angle label (θ, ρ, φ, π, λ…) may go in a `text` element — but write the ACTUAL character (θ), never an escape code like "\\u03b8" or a LaTeX command like "\\theta".
+- WORKED EXAMPLES / STEP-BY-STEP: lay it out as a clean vertical column — for each step a short TEXT header, then the equation as a `math` element just below it, then whitespace before the next step. You do NOT need a colored box around every step (whitespace separates them); if you do use background boxes, leave a clear ~30-45px GAP between them so they never touch, keep them the same width, and never write the math as the box's label — place the `math` element on top of the box.
+- SPACING FOR MATH ELEMENTS — IMPORTANT: a `math` element auto-sizes and is often MUCH TALLER and WIDER than you expect (a `\\frac` is ~3 lines tall; a determinant or `\\begin{aligned}` block can be 4-6 lines tall). So space generously: stack consecutive equations at least ~70-90px apart vertically (more for fractions/matrices/aligned blocks), and never start two equations at overlapping positions. Put a final "boxed answer" CLEARLY BELOW the last computation step with a big gap — never on top of it. After creating everything, ALWAYS `review`: equations will be bigger than you guessed, so expect to re-stack them with more vertical space.
 - Build on what's already on the canvas instead of redrawing it, unless asked to start over.
+
+## Drawing in 3D (perspective) — IMPORTANT
+
+When the user asks for a 3D object, surface, solid, or anything "spherical / in 3D / a surface / a region in space", DRAW IT IN PERSPECTIVE on the whiteboard — do NOT fall back to a flat 2D shape (a sphere is NOT just a circle). The canvas is 2D, so you fake depth using the primitives you have (ellipse, line with `points`, arrow). General principles:
+- A CIRCLE seen at an angle is an ELLIPSE: flatten it vertically. Use this for every "ring" (equator, base of a cylinder/cone, opening of a bowl).
+- Use an oblique/isometric look: the depth axis recedes diagonally (up-and-to-the-right) and is foreshortened (drawn ~60-70% length).
+- For hidden/back edges, use a LIGHT GRAY stroke ("#adb5bd") so they read as "behind"; keep front edges dark ("#1e1e1e").
+- A `line` can be a smooth curve: give it several `points` (relative offsets) and Excalidraw rounds it. Use this for curved surface profiles.
+- Give solids a faint fill (e.g. backgroundColor "#e7f5ff") for body, and add a couple of cross-section curves so the eye reads volume.
+
+Recipes (compose these from primitives):
+- 3D AXES: three arrows from one origin — z straight UP, x down-and-LEFT, y down-and-RIGHT (foreshortened). Label "x", "y", "z" at the tips.
+- SPHERE: an `ellipse` circle (width = height) for the outline; ADD a flat horizontal `ellipse` across the middle (same width, height ≈ 30% of the circle) for the equator, and a thin VERTICAL ellipse for a meridian. That equator ellipse is what makes it read as a 3D ball instead of a flat disk.
+- CYLINDER: a top `ellipse` + a bottom `ellipse` (same width, flattened) + two vertical `line`s joining their left/right edges.
+- CONE: a base `ellipse` (flattened) + two `line`s from its left/right edges up to a single apex point.
+- PARABOLOID / BOWL: a top opening `ellipse` (flattened) + two curved `line`s (use `points`) sweeping down to a bottom point.
+- PLANE / SURFACE PATCH: a parallelogram — a `line` with 4 corner `points` closed back to the start (e.g. points [[0,0],[160,-50],[260,0],[100,50],[0,0]]); add a few interior grid lines for a mesh. A `diamond` also reads as a tilted square.
+- BOX / CUBE: a front `rectangle` + an identical one offset up-and-right + four `line`s connecting matching corners (back edges light gray).
+- Label key features with short `text` placed OUTSIDE the object in clear space, and put any equation in a `math` element beside it.
 
 ## Reviewing your work
 
@@ -163,6 +197,31 @@ def _format_canvas_state(prompt_data: dict) -> str:
     else:
         lines.append('There are no shapes in your viewport right now.')
 
+    # Call out the user's pasted images LOUDLY as keep-out zones so the agent
+    # reserves that space BEFORE it plans a layout — not after the fact. (The
+    # agent's own typeset-math images carry a "math:" text and are excluded.)
+    user_images = [
+        s for s in blurry
+        if s.get('type') == 'image' and not str(s.get('text') or '').startswith('math:')
+    ]
+    if user_images:
+        rects = '; '.join(
+            f"id {s.get('id')}: x {s.get('x')}..{int(s.get('x', 0)) + int(s.get('w', 0))}, "
+            f"y {s.get('y')}..{int(s.get('y', 0)) + int(s.get('h', 0))}"
+            for s in user_images
+        )
+        plural = 's' if len(user_images) > 1 else ''
+        lines.append(
+            f"KEEP-OUT ZONE{plural.upper()} — the user has pasted {len(user_images)} reference "
+            f"image{plural} onto the canvas, occupying these rectangle{plural}: {rects}. "
+            f"This space is OCCUPIED and OFF-LIMITS. Before you place anything, treat "
+            f"{'these rectangles' if len(user_images) > 1 else 'this rectangle'} as taken: do NOT "
+            f"put any shape, label, arrow, or math element inside or overlapping "
+            f"{'them' if len(user_images) > 1 else 'it'}. Lay out your ENTIRE drawing in the clear "
+            f"space beside or below the image{plural}. You cannot move or edit the image{plural} — "
+            f"so YOU must stay clear of {'them' if len(user_images) > 1 else 'it'}."
+        )
+
     clusters = prompt_data.get('peripheralClusters', [])
     if clusters:
         lines.append(
@@ -204,7 +263,13 @@ def build_messages(prompt_data: dict) -> list:
     if selected:
         user_content.append({
             'type': 'text',
-            'text': 'The user currently has these shape ids selected: ' + ', '.join(selected),
+            'text': (
+                'THE USER HAS SELECTED these shape ids: ' + ', '.join(selected) + '. '
+                'This is what they are referring to. Find them in the shape list / screenshot '
+                '(to your left, at negative coordinates), study what they actually are/show, and '
+                'base your visualization on THEM — do not assume a different subject. Draw your '
+                'work in your clear area to the right (x ≥ 0), not on top of the selection.'
+            ),
         })
 
     # Automatically detected overlaps (the "linter") — the model MUST resolve these.
@@ -241,7 +306,7 @@ def build_messages(prompt_data: dict) -> list:
 
 # ─── Action validation ────────────────────────────────────────────────────────
 
-VALID_SHAPE_TYPES = {'rectangle', 'ellipse', 'diamond', 'text', 'arrow', 'line'}
+VALID_SHAPE_TYPES = {'rectangle', 'ellipse', 'diamond', 'text', 'arrow', 'line', 'math'}
 
 
 def is_action_safe(action: dict) -> bool:

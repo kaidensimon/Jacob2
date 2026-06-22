@@ -7,6 +7,7 @@ export type AgentShapeType =
   | 'text'
   | 'arrow'
   | 'line'
+  | 'math'
 
 export interface AgentShape {
   id: string
@@ -16,6 +17,8 @@ export interface AgentShape {
   width?: number
   height?: number
   text?: string
+  // math: a LaTeX string, rendered to an image element on the canvas
+  latex?: string
   strokeColor?: string
   backgroundColor?: string
   fillStyle?: 'solid' | 'hachure' | 'cross-hatch'
@@ -24,6 +27,8 @@ export interface AgentShape {
   fromId?: string
   toId?: string
   points?: [number, number][]
+  // Filled in by the client once a `math` shape has been rendered to an image.
+  fileId?: string
 }
 
 export type AlignEdge =
