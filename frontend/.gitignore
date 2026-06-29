@@ -22,3 +22,16 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# agent screenshot harness artifacts
+*.png
+agent-shot-failure.png
+
+# dev screenshot harnesses
+agent-shot.mjs
+anim-shot.mjs
+wb-save-shot.mjs
+grapher-shot.mjs
+repro-grapher.mjs
+grapher-shot.mjs
+wb-plot-shot.mjs

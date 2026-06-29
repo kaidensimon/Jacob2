@@ -11,44 +11,30 @@ export interface AgentModelDefinition {
 }
 
 export const AGENT_MODEL_DEFINITIONS = {
-	// Anthropic models
-	// sonnet 4.5 is recommended
-	'claude-sonnet-4-5': {
-		name: 'claude-sonnet-4-5',
-		id: 'claude-sonnet-4-5',
-		provider: 'anthropic',
-	},
-
-	'claude-opus-4-5': {
-		name: 'claude-opus-4-5',
-		id: 'claude-opus-4-5',
-		provider: 'anthropic',
-	},
-
-	// Google models
-	'gemini-3-pro-preview': {
-		name: 'gemini-3-pro-preview',
-		id: 'gemini-3-pro-preview',
-		provider: 'google',
-		thinking: true,
-	},
-
-	// gemini 3 flash is fastest, and quite good
-	'gemini-3-flash-preview': {
-		name: 'gemini-3-flash-preview',
-		id: 'gemini-3-flash-preview',
-		provider: 'google',
-	},
-
-	// OpenAI models
+	// OpenAI models (this app's Django backend uses an OpenAI API key)
+	// gpt-5.2 is the same model the official tldraw agent template uses for OpenAI
 	'gpt-5.2-2025-12-11': {
 		name: 'gpt-5.2-2025-12-11',
 		id: 'gpt-5.2-2025-12-11',
 		provider: 'openai',
 	},
+
+	// faster and cheaper
+	'gpt-5-mini': {
+		name: 'gpt-5-mini',
+		id: 'gpt-5-mini',
+		provider: 'openai',
+	},
+
+	// legacy non-reasoning model
+	'gpt-4o': {
+		name: 'gpt-4o',
+		id: 'gpt-4o',
+		provider: 'openai',
+	},
 } as const
 
-export const DEFAULT_MODEL_NAME: AgentModelName = 'claude-sonnet-4-5'
+export const DEFAULT_MODEL_NAME: AgentModelName = 'gpt-5.2-2025-12-11'
 
 /**
  * Check if a string is a valid AgentModelName.
