@@ -37,9 +37,9 @@ Highlights:
 
 ## Example: generated diagram
 
-![Example whiteboard diagram](diagram_example_torque.jpg)
+![Example whiteboard diagram](diagram_example.jpg)
 
-_From the prompt "can you draw on the whiteboard how torque works?": the agent draws a labeled lever diagram, typeset torque equations, and a CCW vs CW sign-convention panel._
+_From the prompt "can you generate me a diagram of how torque works?": the agent draws a labeled lever diagram, typeset torque equations, and a right-hand-rule direction inset._
 
 ---
 
