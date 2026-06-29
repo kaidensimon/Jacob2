@@ -43,6 +43,14 @@ export type AlignEdge =
 export type AgentAction =
   | { _type: 'think'; text?: string; complete?: boolean; time?: number }
   | { _type: 'message'; text?: string; complete?: boolean; time?: number }
+  // The agent can't tell what to draw — ask the user to elaborate, draw nothing.
+  | {
+      _type: 'needContext'
+      text?: string
+      needsMoreContext?: boolean
+      complete?: boolean
+      time?: number
+    }
   | { _type: 'create'; shape?: AgentShape; complete?: boolean; time?: number }
   | {
       _type: 'update'
@@ -92,6 +100,39 @@ export type AgentAction =
       time?: number
     }
   | { _type: 'review'; text?: string; complete?: boolean; time?: number }
+  // Tool: render a real 2D/3D plot of these expressions and feed the image back
+  // as a drawing reference (so the agent traces the correct shape).
+  | {
+      _type: 'graphRef'
+      dimension?: '2d' | '3d'
+      expressions?: string[]
+      // Optional: where to place the plot (viewport-relative), so it fits the
+      // agent's layout when invoked partway through a drawing.
+      x?: number
+      y?: number
+      width?: number
+      height?: number
+      text?: string
+      complete?: boolean
+      time?: number
+    }
+  // Tool: deterministically draw a region-between-curves figure (for region of
+  // integration / change of order). The client draws curves, shaded region,
+  // axes, and both strips; the agent only adds integrals/labels around it.
+  | {
+      _type: 'regionRef'
+      lower?: string // lower bounding curve y = f(x)
+      upper?: string // upper bounding curve y = f(x)
+      xmin?: number
+      xmax?: number
+      x?: number
+      y?: number
+      width?: number
+      height?: number
+      text?: string
+      complete?: boolean
+      time?: number
+    }
   | { error: string }
 
 // Items shown in the chat panel.

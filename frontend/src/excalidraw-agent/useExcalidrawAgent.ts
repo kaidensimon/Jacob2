@@ -12,6 +12,9 @@ import {
 } from './agentClient'
 import { detectOverlaps } from './detect'
 import { renderLatexToImage } from './mathRender'
+import { renderGraphToImage } from '../grapher/graphRender'
+import { plotGraph } from '../grapher/plotEquation'
+import { plotRegion } from '../grapher/regionRender'
 import {
   type Box,
   type Vec,
@@ -51,7 +54,9 @@ function buildCritiquePrompt(request: string, issues: string[]): string {
   return (
     'You are now reviewing your OWN drawing as a designer. Your goal is a clean, uncluttered, ' +
     'instantly readable diagram. Study the screenshot and reason step by step in a `think` action:\n' +
-    `- Fidelity: does it clearly and correctly visualize the request: "${request}"? Is anything ESSENTIAL missing or wrong?\n` +
+    `- LOOK HARD AT THE SCREENSHOT FIRST, and be your HARSHEST critic. Squint: would someone INSTANTLY recognize this as "${request}"? If it reads as disjointed, floating, or misaligned strokes instead of the actual object, it FAILS — say so bluntly and fix it. Do NOT rate your own work generously.\n` +
+    '- STRUCTURAL COHERENCE (critical for anything built from multiple primitives — a cylinder, cone, sphere, box, 3D axes, a curve on axes, etc.): the parts must actually CONNECT and line up into ONE coherent object. Check every join precisely: a cylinder\'s two vertical sides must touch the LEFT and RIGHT edges of BOTH the top and bottom ellipses (same x as the ellipse extremes, spanning exactly top-to-bottom — no gaps, no overshoot); a cone\'s sides meet at a single apex AND land on the base ellipse\'s edges; a box\'s edges meet at shared corners; axes share one origin. If any piece floats, stops short, overshoots, or is offset, the figure looks BROKEN — REPAIR it by moving/resizing those endpoints to the exact connection points. Reconnecting a broken figure is REQUIRED and is NOT "adding clutter".\n' +
+    `- Fidelity: does it clearly and correctly visualize "${request}"? Is anything ESSENTIAL missing, wrong, or unrecognizable?\n` +
     '- Clutter: is it too busy? Are there too many labels, wordy annotations, or decorative extras? Readable diagrams are sparse — plan to REMOVE or shorten anything non-essential.\n' +
     '- Readability: are labels short and legible (not cut off, not overlapping shapes/other text)? Is there a clear structure a viewer can follow at a glance?\n' +
     '- Cleanliness: is it balanced with generous whitespace? Anything cramped, lopsided, or scattered?\n' +
@@ -61,9 +66,13 @@ function buildCritiquePrompt(request: string, issues: string[]): string {
     'a centered label, move that label to just inside its TOP edge so it is off the inner content; ' +
     '(c) if you drew a long leader/pointer line from a label to a distant feature, DELETE the line ' +
     'and place the label right next to the feature instead (make room if needed).\n' +
-    'IMPORTANT: review is for CLEANING UP, not adding. Do NOT add new shapes or labels unless ' +
-    'something genuinely essential is missing — when in doubt, SIMPLIFY: delete clutter, shorten or ' +
-    'merge wordy/overlapping labels, lift text off shapes into clear space, and add whitespace. ' +
+    'A precisely PLOTTED graph curve (a smooth blue line the graph tool drew for you) is EXACT and ' +
+    'FINAL — NEVER delete, move, or redraw it; only tidy the axes and labels around it.\n' +
+    'IMPORTANT: review is for REPAIRING and cleaning up. First FIX broken structure (reconnect / ' +
+    'realign the pieces of a figure so it reads as the real object), then remove clutter. Do NOT add ' +
+    'NEW decorative shapes or labels unless something essential is missing — when in doubt, SIMPLIFY: ' +
+    'delete clutter, shorten or merge wordy/overlapping labels, lift text off shapes into clear space, ' +
+    'and add whitespace. ' +
     'Move strategically (a spot that fixes the issue AND keeps the composition balanced and ' +
     'readable), not the minimum nudge. Use stack/distribute/align for tidy groups, resize to widen ' +
     'containers with cut-off text, move for placement, delete to cut clutter.\n' +
@@ -92,6 +101,25 @@ export function useExcalidrawAgent(
   const originRef = useRef<Vec>({ x: 0, y: 0 })
   // Set when the model emits a `review` action (it wants another critique pass).
   const reviewRequestedRef = useRef(false)
+  // Set when the model emits `needContext` — it can't tell what to draw and is
+  // asking the user to elaborate, so we stop instead of forcing a drawing.
+  const needsContextRef = useRef(false)
+  // Set when the model emits `graphRef` — it wants a real plot rendered and fed
+  // back as a drawing reference before it draws the shape.
+  const pendingGraphRefRef = useRef<{
+    dimension: '2d' | '3d'
+    expressions: string[]
+    box?: Box | null
+  } | null>(null)
+  // Set when the model emits `regionRef` — it wants the client to draw a full
+  // region-between-curves figure (curves, shaded region, axes, both strips).
+  const pendingRegionRef = useRef<{
+    lower: string
+    upper: string
+    xmin: number
+    xmax: number
+    box?: Box | null
+  } | null>(null)
   // Set when a pass actually changed the canvas (used to know when to stop).
   const mutatedRef = useRef(false)
   // The agent's OWN viewport (absolute scene coords) — independent of the user's
@@ -264,6 +292,7 @@ export function useExcalidrawAgent(
   const applyPositions = useCallback(
     (positions: Map<string, Vec>) => {
       for (const [id, pos] of positions) {
+        if (id.startsWith('gcurve-')) continue // never reposition a plotted curve
         const shape = shapesRef.current.get(id)
         if (shape) shapesRef.current.set(id, { ...shape, x: pos.x, y: pos.y })
       }
@@ -282,12 +311,33 @@ export function useExcalidrawAgent(
 
       const origin = originRef.current
 
+      // A deterministically-plotted graph curve ("gcurve-…") is EXACT and FINAL.
+      // Never let the agent delete, move, resize, or edit it — it may only build
+      // axes/labels around it. (The USER can still delete it via the canvas.)
+      const targetId =
+        action._type === 'delete' || action._type === 'move' || action._type === 'resize'
+          ? action.id
+          : action._type === 'update'
+            ? action.shape?.id
+            : undefined
+      if (typeof targetId === 'string' && targetId.startsWith('gcurve-')) return
+
       switch (action._type) {
         case 'think':
           if (action.text) push({ kind: 'think', text: action.text })
           break
         case 'message':
           if (action.text) push({ kind: 'message', text: action.text })
+          break
+
+        case 'needContext':
+          // The agent doesn't know what to draw — surface its question and flag
+          // the turn so we skip drawing/review entirely.
+          needsContextRef.current = true
+          push({
+            kind: 'message',
+            text: action.text || 'I need a bit more detail — what would you like me to visualize?',
+          })
           break
 
         case 'create': {
@@ -441,6 +491,48 @@ export function useExcalidrawAgent(
           // The model wants to take another look — drives a critique pass.
           reviewRequestedRef.current = true
           break
+
+        case 'graphRef': {
+          // The model wants a correct plot to trace. Record the request; the turn
+          // loop renders it and feeds the image back.
+          const exprs = (action.expressions ?? []).filter((e) => typeof e === 'string' && e.trim())
+          if (exprs.length) {
+            // The agent can place the plot (viewport coords) so it fits the
+            // layout when invoked partway through a drawing.
+            const box: Box | null =
+              typeof action.x === 'number' &&
+              typeof action.y === 'number' &&
+              typeof action.width === 'number' &&
+              typeof action.height === 'number'
+                ? { x: action.x + origin.x, y: action.y + origin.y, w: action.width, h: action.height }
+                : null
+            pendingGraphRefRef.current = {
+              dimension: action.dimension === '3d' ? '3d' : '2d',
+              expressions: exprs,
+              box,
+            }
+            push({ kind: 'action', text: `📊 Plotting ${exprs.join(', ')} to trace it accurately…` })
+          }
+          break
+        }
+
+        case 'regionRef': {
+          // The model wants the client to draw a region-between-curves figure.
+          const lower = typeof action.lower === 'string' ? action.lower.trim() : ''
+          const upper = typeof action.upper === 'string' ? action.upper.trim() : ''
+          if (lower && upper && typeof action.xmin === 'number' && typeof action.xmax === 'number') {
+            const box: Box | null =
+              typeof action.x === 'number' &&
+              typeof action.y === 'number' &&
+              typeof action.width === 'number' &&
+              typeof action.height === 'number'
+                ? { x: action.x + origin.x, y: action.y + origin.y, w: action.width, h: action.height }
+                : null
+            pendingRegionRef.current = { lower, upper, xmin: action.xmin, xmax: action.xmax, box }
+            push({ kind: 'action', text: `📐 Drawing the region between ${lower} and ${upper}…` })
+          }
+          break
+        }
       }
     },
     [api, applyToCanvas, applyPositions, boundsOfId, push, startMathRender, setAgentView]
@@ -452,7 +544,8 @@ export function useExcalidrawAgent(
       message: string,
       history: { role: 'user' | 'assistant'; text: string }[],
       signal: AbortSignal,
-      issues?: string[]
+      issues?: string[],
+      reference?: { image: string; note: string }
     ) => {
       await settle()
       await flushMathRenders()
@@ -472,6 +565,8 @@ export function useExcalidrawAgent(
           screenshot: ctx.screenshot,
           history,
           issues,
+          referenceImage: reference?.image,
+          referenceNote: reference?.note,
         },
         handleAction,
         signal
@@ -705,13 +800,217 @@ export function useExcalidrawAgent(
         originRef.current = placement.origin
         drawAreaRef.current = placement.drawArea
         setAgentView(placement.view)
+
+        reviewRequestedRef.current = false
+        needsContextRef.current = false
+        pendingGraphRefRef.current = null
+        // Shared budget of reference plots for the WHOLE request (initial turn +
+        // every review pass), so graphRef can't loop forever.
+        let graphRefBudget = 3
+
+        // Run a turn, then service any `graphRef` the agent emitted on it: render
+        // the plot offscreen and feed the image back so it traces the real shape.
+        // Works for both the initial turn and review passes (where the agent often
+        // realizes the curve is missing and asks to plot it).
+        const runServiced = async (
+          message: string,
+          history: { role: 'user' | 'assistant'; text: string }[],
+          issues?: string[]
+        ) => {
+          await runTurn(message, history, controller.signal, issues)
+          while (
+            (pendingGraphRefRef.current || pendingRegionRef.current) &&
+            graphRefBudget > 0 &&
+            !controller.signal.aborted
+          ) {
+            // ── Region-between-curves figure (fully deterministic) ──────────────
+            const rreq = pendingRegionRef.current
+            if (rreq) {
+              pendingRegionRef.current = null
+              graphRefBudget--
+              const da = drawAreaRef.current ?? computePlacement().drawArea
+              const rbox =
+                rreq.box ?? { x: da.x + da.w * 0.08, y: da.y + da.h * 0.12, w: da.w * 0.56, h: da.h * 0.72 }
+              let region: Awaited<ReturnType<typeof plotRegion>> = null
+              try {
+                region = await plotRegion(rreq.lower, rreq.upper, rreq.xmin, rreq.xmax, rbox)
+              } catch {
+                region = null
+              }
+              if (region) {
+                region.drawables.forEach((d, di) => {
+                  const id = `gcurve-region-${graphRefBudget}-${di}`
+                  if (d.type === 'rectangle' && d.rect) {
+                    shapesRef.current.set(id, {
+                      id, type: 'rectangle',
+                      x: d.rect.x, y: d.rect.y, width: d.rect.w, height: d.rect.h,
+                      strokeColor: d.stroke, backgroundColor: d.fill, fillStyle: d.fillStyle,
+                    })
+                  } else if (d.type === 'arrow' && d.points && d.points.length >= 2) {
+                    const a = d.points[0], b = d.points[d.points.length - 1]
+                    shapesRef.current.set(id, {
+                      id, type: 'arrow', x: a[0], y: a[1],
+                      points: [[0, 0], [b[0] - a[0], b[1] - a[1]]], strokeColor: d.stroke,
+                    })
+                  } else if (d.type === 'text' && d.points && d.points.length >= 1 && d.text) {
+                    shapesRef.current.set(id, {
+                      id, type: 'text', x: d.points[0][0], y: d.points[0][1],
+                      text: d.text, fontSize: d.fontSize ?? 16, strokeColor: d.stroke,
+                    })
+                  } else if (d.points && d.points.length >= 2) {
+                    const ox = d.points[0][0], oy = d.points[0][1]
+                    shapesRef.current.set(id, {
+                      id, type: 'line', x: ox, y: oy,
+                      points: d.points.map(([px, py]) => [px - ox, py - oy] as [number, number]),
+                      strokeColor: d.stroke, backgroundColor: d.fill, fillStyle: d.fillStyle,
+                    })
+                  }
+                })
+                applyToCanvas()
+                push({ kind: 'action', text: '📐 Drew the region figure — adding integrals…' })
+                const figRight = Math.round(rbox.x + rbox.w - originRef.current.x)
+                const figTop = Math.round(rbox.y - originRef.current.y)
+                const note =
+                  `The region figure is COMPLETE and LOCKED — the bounding curves, the shaded region, ` +
+                  `the x/y axes, both strips, AND all of their labels (curve names, "x"/"y", "dy dx", ` +
+                  `"dx dy") are already drawn. Do NOT touch the figure and do NOT add any labels on or ` +
+                  `near it — that space is done. Add ONLY: (1) a short TITLE above the figure (around ` +
+                  `y=${figTop - 30}), and (2) the two integral forms as \`math\` elements OFF TO THE ` +
+                  `RIGHT of the figure, starting around x=${figRight + 60} in the clear margin — the ` +
+                  `ORIGINAL order and the SWAPPED order (solve each boundary for the other variable). ` +
+                  `Keep ALL your text in the clear margins, never over the figure. Then finish.`
+                await runTurn(`${task}\n\n${note}`, history, controller.signal)
+              }
+              continue
+            }
+
+            const req = pendingGraphRefRef.current as
+              | { dimension: '2d' | '3d'; expressions: string[]; box?: Box | null }
+              | null
+            if (!req) break
+            pendingGraphRefRef.current = null
+            graphRefBudget--
+
+            // 2D: draw the curve EXACTLY (deterministic — handles functions,
+            // implicit relations like x^2+y^2=25, vertical lines, and polar),
+            // then have the agent add axes/labels around it. Far more reliable
+            // than asking the model to eyeball-trace points.
+            if (req.dimension === '2d') {
+              const da = drawAreaRef.current ?? computePlacement().drawArea
+              // Use the spot the agent asked for; otherwise a default region.
+              const box =
+                req.box ?? { x: da.x + da.w * 0.18, y: da.y + da.h * 0.16, w: da.w * 0.5, h: da.h * 0.56 }
+              let graph: Awaited<ReturnType<typeof plotGraph>> = null
+              try {
+                graph = await plotGraph(req.expressions, box)
+              } catch {
+                graph = null
+              }
+              if (graph) {
+                const rel = (p: [number, number]) =>
+                  `(${Math.round(p[0] - originRef.current.x)}, ${Math.round(p[1] - originRef.current.y)})`
+                const CURVE_COLORS = ['#1971c2', '#2f9e44', '#e8590c', '#9c36b5', '#0c8599']
+                const curveInfo: string[] = []
+                // Curves (each branch a locked line).
+                graph.curves.forEach((c, ci) => {
+                  c.polylines.forEach((pl, pi) => {
+                    if (pl.length < 2) return
+                    // Use the polyline's bounding box as x/y/size so an arrow
+                    // bound to this curve points at its true center.
+                    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+                    for (const [px, py] of pl) {
+                      minX = Math.min(minX, px); minY = Math.min(minY, py)
+                      maxX = Math.max(maxX, px); maxY = Math.max(maxY, py)
+                    }
+                    shapesRef.current.set(`gcurve-graph-${graphRefBudget}-${ci}-${pi}`, {
+                      id: `gcurve-graph-${graphRefBudget}-${ci}-${pi}`,
+                      type: 'line', x: minX, y: minY,
+                      width: Math.max(1, maxX - minX), height: Math.max(1, maxY - minY),
+                      points: pl.map(([px, py]) => [px - minX, py - minY] as [number, number]),
+                      strokeColor: CURVE_COLORS[ci % CURVE_COLORS.length],
+                    })
+                  })
+                  curveInfo.push(`"${req.expressions[ci]}" passes through about ${rel(c.anchor)}`)
+                })
+                // Axes (locked arrows).
+                const axis = (id: string, seg: [[number, number], [number, number]]) => {
+                  const a0 = seg[0], a1 = seg[1]
+                  shapesRef.current.set(id, {
+                    id, type: 'arrow', x: a0[0], y: a0[1],
+                    points: [[0, 0], [a1[0] - a0[0], a1[1] - a0[1]]], strokeColor: '#1e1e1e',
+                  })
+                }
+                axis(`gcurve-graph-${graphRefBudget}-axx`, graph.xAxis)
+                axis(`gcurve-graph-${graphRefBudget}-axy`, graph.yAxis)
+                applyToCanvas()
+                push({ kind: 'action', text: '📈 Drew the graph — labeling it…' })
+                const curveIds = graph.curves
+                  .map((_c, ci) => `gcurve-graph-${graphRefBudget}-${ci}-0`)
+                  .join(', ')
+                const note =
+                  `The graph is DRAWN and LOCKED: the curve(s) and the x/y axes (origin at ` +
+                  `${rel([graph.origin.x, graph.origin.y])}). Do NOT redraw, move, or touch any of it. ` +
+                  `Your ONLY job now is to LABEL it. You MUST do BOTH: (1) add a small "x" just past the ` +
+                  `right tip of the x-axis near ${rel(graph.xAxis[1])} and "y" just above the top of the ` +
+                  `y-axis near ${rel(graph.yAxis[1])}; (2) for EACH curve, create a short text label of ` +
+                  `its equation in nearby CLEAR space (OFF the curve), AND an arrow pointing from that ` +
+                  `label to the curve — set the arrow's fromId to your text label and its toId to the ` +
+                  `curve element (curve ids: ${curveIds}). Curves: ${curveInfo.join('; ')}. Keep all ` +
+                  `text off the curves and axes. Then continue your work, or finish.`
+                await runTurn(`${task}\n\n${note}`, history, controller.signal)
+                continue
+              }
+            }
+
+            // 3D surfaces (and 2D fallback): render an image to trace.
+            let image: string | undefined
+            try {
+              image = await renderGraphToImage(req.dimension, req.expressions)
+            } catch (err: any) {
+              push({ kind: 'message', text: `I couldn't plot that (${err?.message || 'error'}) — I'll sketch it from what I know.` })
+            }
+            const note =
+              `This is a CORRECT ${req.dimension.toUpperCase()} plot of ${req.expressions.join(', ')}, ` +
+              `rendered by a real graphing engine. TRACE it so your drawing LOOKS LIKE THIS IMAGE: ` +
+              `a curve MUST be a \`line\` with MANY points (~10-15) following the bend — never a ` +
+              `straight 2-point line — and do NOT represent the graph as an equation image; draw the ` +
+              `curve itself. CRITICAL ORIENTATION: the whiteboard's y-axis points DOWN (y grows ` +
+              `downward), so to match the reference you must FLIP vertically — a curve that opens ` +
+              `UPWARD in the reference (e.g. y=x^2, vertex at the bottom, arms rising) must be drawn ` +
+              `with its arms going toward SMALLER y values (UP the canvas) and its vertex on the ` +
+              `x-axis. Your finished curve must look like the reference image, not a vertical mirror ` +
+              `of it.`
+            const followup =
+              `${task}\n\nThe reference plot you requested is attached — now DRAW THE CURVE/SURFACE ` +
+              `ITSELF over your existing axes, tracing the reference. Do not just label it. Then ` +
+              `CONTINUE the rest of your work/solution where you left off.`
+            await runTurn(
+              followup,
+              history,
+              controller.signal,
+              undefined,
+              image ? { image, note } : undefined
+            )
+          }
+          // Budget spent but it still wants a plot — drop it so it doesn't hang.
+          if (pendingGraphRefRef.current) pendingGraphRefRef.current = null
+          if (pendingRegionRef.current) pendingRegionRef.current = null
+        }
+
+        const shapeCountBefore = shapesRef.current.size
+        await runServiced(task, baseHistory)
+
+        // If the agent asked for more context (or simply drew nothing on
+        // purpose), respect that: don't force a drawing via the review loop.
+        if (needsContextRef.current || shapesRef.current.size === shapeCountBefore) {
+          setAgentView(null)
+          return
+        }
+
         api.setToast({
           message: `✏️ ${AGENT_NAME} is drawing nearby — open “${AGENT_NAME}'s view” to follow`,
           duration: 4000,
         })
-
-        reviewRequestedRef.current = false
-        await runTurn(task, baseHistory, controller.signal)
 
         // Critique passes. The detector now only flags OBJECTIVE readability
         // problems (text-on-text, text-on-arrow, arrows through shapes — never
@@ -752,7 +1051,7 @@ export function useExcalidrawAgent(
                 ? `Cleaning up ${issues.length} readability issue${issues.length > 1 ? 's' : ''}…`
                 : 'Reviewing the layout for clarity and balance…',
           })
-          await runTurn(buildCritiquePrompt(task, issues), reviewHistory, controller.signal, issues)
+          await runServiced(buildCritiquePrompt(task, issues), reviewHistory, issues)
         }
       } catch (err: any) {
         if (err?.name !== 'AbortError') {

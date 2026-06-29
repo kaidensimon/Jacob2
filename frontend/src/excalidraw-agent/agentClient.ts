@@ -280,6 +280,10 @@ export interface StreamPayload {
   screenshot?: string
   history: { role: 'user' | 'assistant'; text: string }[]
   issues?: string[]
+  // A correct plot the agent asked for (via the `graphRef` tool), fed back as a
+  // drawing reference.
+  referenceImage?: string
+  referenceNote?: string
 }
 
 /**

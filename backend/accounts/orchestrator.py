@@ -9,6 +9,7 @@ context — that would waste tokens), one of four actions:
 """
 
 import json
+import logging
 import os
 
 from django.http import JsonResponse
@@ -49,6 +50,14 @@ Rules:
 """
 
 VALID_ACTIONS = {'chat', 'ask', 'whiteboard', 'manim', 'grapher'}
+
+logger = logging.getLogger(__name__)
+if not logger.handlers:
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter('[%(asctime)s] %(levelname)s %(name)s: %(message)s'))
+    logger.addHandler(handler)
+logger.setLevel(logging.INFO)
+logger.propagate = False
 
 
 def _decide(messages, api_key):
@@ -125,7 +134,7 @@ def orchestrate(request):
         action = 'chat'
 
     if action == 'manim':
-        print('forwarded to manim agent')
+        logger.info('forwarded to manim agent')
 
     return _cors(JsonResponse(decision))
 

@@ -6,6 +6,7 @@ has small bugs, so we retry with the render error fed back for self-correction.
 Videos are stored so the user can choose to keep them.
 """
 
+import base64
 import json
 import os
 import shutil
@@ -14,21 +15,53 @@ import sys
 import tempfile
 import time
 from uuid import uuid4
-
+import logging 
 from django.conf import settings
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from .models import Animation
+logger = logging.getLogger(__name__)
+if not logger.handlers:
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter('[%(asctime)s] %(levelname)s %(name)s: %(message)s'))
+    logger.addHandler(handler)
+logger.setLevel(logging.INFO)
+logger.propagate = False
+
+BAD_KEYFRAME_EXAMPLE_DIR = os.path.join(os.path.dirname(__file__), 'bad_keyframes_exampels')
+BAD_KEYFRAME_EXAMPLE_FILES = [
+    'bad_example_1.jpg',
+    'abd_example_2.jpg',
+    'bad_example_3.jpg',
+    'bad_example_4.jpg',
+]
+
+
+def _load_bad_keyframe_examples():
+    examples = []
+    for filename in BAD_KEYFRAME_EXAMPLE_FILES:
+        path = os.path.join(BAD_KEYFRAME_EXAMPLE_DIR, filename)
+        if not os.path.isfile(path):
+            continue
+        try:
+            with open(path, 'rb') as f:
+                data = f.read()
+            b64 = base64.b64encode(data).decode('ascii')
+            examples.append((filename, f'data:image/jpeg;base64,{b64}'))
+        except Exception:
+            continue
+    return examples
+
 
 MANIM_MODEL = 'gpt-5.2-2025-12-11'
 RENDER_QUALITY = '-ql'  # 480p15 — fast & reliable; fine for a chat-embedded video
 TOTAL_BUDGET = 300        # ~5 minutes total
 RENDER_CAP = 160          # max seconds for any single render
 MAX_ATTEMPTS = 3          # initial code-error retries
-MAX_REVIEWS = 2           # visual review/fix passes (the agent looks at frames)
-MIN_TIME_FOR_REVIEW = 110 # need this much budget left to do another review + render
+MAX_REVIEWS = 3           # visual review/fix passes (the agent looks at frames)
+MIN_TIME_FOR_REVIEW = 70  # budget needed to do another review + render (renders ~25-40s)
 
 MANIM_SYSTEM_PROMPT = """You are an expert Manim (Community Edition v0.20) animator and educator. Given a topic, FIRST reason about the clearest, most engaging way to teach it as a short animation, then write the Manim code to do it.
 
@@ -166,19 +199,28 @@ def _extract_frames(video_path, n=5):
         return []
 
 
-MANIM_REVIEW_PROMPT = """You are reviewing your OWN Manim animation for VISUAL QUALITY. You are shown several KEY FRAMES captured from the rendered video, plus the code that produced them.
+MANIM_REVIEW_PROMPT = """You are reviewing your OWN Manim animation, looking at several KEY FRAMES from the rendered video plus the code. Your job is to catch GENUINELY BROKEN layout — and ONLY that. Be a fair reviewer, NOT a nitpicker.
 
-Look hard at the frames for LAYOUT PROBLEMS:
-- text or shapes OVERLAPPING / sitting on top of each other
-- elements CUT OFF or running past the edges of the frame (visible area is about x ∈ [-7, 7], y ∈ [-4, 4] manim units — content must stay inside with margin)
-- moving or duplicated text colliding with existing labels
-- clutter, cramped spacing, labels that are hard to read, or anything that just looks broken
+DEFAULT TO CLEAN. A frame is fine as long as it is readable. Most animations are fine — returning clean is the normal, expected outcome. Only mark it for fixing if you can CLEARLY SEE one of these real problems in a frame:
+- text or shapes literally OVERLAPPING / sitting ON TOP of each other so they are hard to read
+- an element CUT OFF or running past the visible frame edge (visible area ≈ x ∈ [-7, 7], y ∈ [-4, 4] manim units)
+- moving or duplicated text colliding with other text so it looks garbled
 
-If there are problems, REWRITE the code to fix them: reposition and space things out (next_to/shift/to_edge/arrange with buffers), scale groups down so everything fits inside the frame, put calculations in their own clear area, and fade/remove anything that overlaps. Preserve the teaching content and keep it cheap to render. Same rules as before: `class GeneratedScene(Scene)`, NO LaTeX (unicode only).
+Example bad layouts from the attached screenshots:
+- `bad_example_1.jpg`: the `y = 2 - x` and `y = x^2` labels are placed right on top of the shaded area, making the equations unreadable.
+- `bad_example_2.jpg`: a text label sits underneath the graph shading and is impossible to read.
+- `bad_example_3.jpg`: the text/info box overlaps the graph, making the diagram hard to read.
+- `bad_example_4.jpg`: the number line, graph, and info/textbox all overlap so the whole frame becomes illegible.
+- 'bad_example_5.jpg': bad_example_5: the text is all overlapped on top of eachother, making it hard to read.
+
+These images are provided as examples of BAD keyframes. Use them as reference when judging whether the rendered frames are readable.
+
+Do NOT flag (these are FINE, leave them alone): tight-but-readable spacing, blank/empty areas, color or style choices, small gaps, slight imbalance, things that are merely "could be a little nicer", or ANYTHING you are not SURE is a real overlap or cut-off. When in doubt, it is CLEAN. Do not invent problems, and do not rewrite a frame that is already readable.
 
 Reply with ONLY JSON:
-- If the frames are clean and readable: {"clean": true}
-- If they need fixing: {"clean": false, "title": "<title>", "code": "<full corrected manim code>"}"""
+- If the frames are readable with no clear overlap/cut-off (the COMMON case): {"clean": true}
+- ONLY if there is a clear, real overlap or cut-off: {"clean": false, "title": "<title>", "code": "<full corrected manim code>"}
+  When you do fix it: reposition/space things out (next_to/shift/to_edge/arrange with buffers), scale groups down to fit the frame, put calculations in a separate clear area, and change ONLY what is needed to fix the real problem — keep everything that already works. Same rules: `class GeneratedScene(Scene)`, NO LaTeX (unicode only)."""
 
 
 def _critique_and_fix(client, task, code, frames):
@@ -186,11 +228,17 @@ def _critique_and_fix(client, task, code, frames):
         'type': 'text',
         'text': (
             f'Topic: {task}\n\nBelow are key frames from the rendered video, then the code. '
-            'Find and fix any overlapping, cut-off, or cluttered layout problems.\n\nCODE:\n' + code
+            'The next images are bad-example references — use them to understand what BAD keyframes look like. '
+            'Return clean unless you can clearly see real OVERLAP or CUT-OFF; do not nitpick.'
         ),
     }]
+    for filename, example in _load_bad_keyframe_examples():
+        content.append({'type': 'text', 'text': f'Bad example: {filename}'})
+        content.append({'type': 'image_url', 'image_url': {'url': example}})
+    content.append({'type': 'text', 'text': 'Bad example reference images are shown above. Now review the actual key frames below.'})
     for f in frames:
         content.append({'type': 'image_url', 'image_url': {'url': f}})
+    content.append({'type': 'text', 'text': 'CODE:\n' + code})
     resp = client.chat.completions.create(
         model=MANIM_MODEL,
         messages=[
@@ -251,11 +299,13 @@ def manim_generate(request):
             render_timeout = min(RENDER_CAP, remaining)
 
             try:
+                logger.info('Manim agent generating code...')
                 title, code = _generate_code(client, task, code, error)
             except Exception as e:
                 error = f'Code generation failed: {e}'
                 break
             mp4_path, error, tmpdir = _render(code, render_timeout)
+            logger.info(f'Manim agent render attempt {attempt + 1}: mp4_path={mp4_path}, error={error}')
             if mp4_path:
                 break
             # On a timeout, the retry prompt (see _generate_code) asks for a much
@@ -280,7 +330,7 @@ def manim_generate(request):
             remaining = int(deadline - time.monotonic())
             if remaining < MIN_TIME_FOR_REVIEW:
                 break
-            frames = _extract_frames(mp4_path, n=5)
+            frames = _extract_frames(mp4_path, n=6)
             if not frames:
                 break
             try:
@@ -288,7 +338,9 @@ def manim_generate(request):
             except Exception:
                 break
             if verdict.get('clean'):
+                logger.info('Manim Agent says things look all good')
                 break
+            logger.info('Manim agent review found layout issues; re-rendering with fixes.')
             new_code = verdict.get('code')
             if not new_code or new_code.strip() == (code or '').strip():
                 break

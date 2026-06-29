@@ -75,7 +75,6 @@ export function buildSkeletons(
     if (a) return agentBounds(a)
     return externalBounds.get(id)
   }
-  const isAgentShape = (id?: string): boolean => !!id && shapes.has(id)
 
   const skeletons: Skeleton[] = []
 
@@ -151,9 +150,19 @@ export function buildSkeletons(
             [0, 0],
             [b.x - a.x, b.y - a.y],
           ]
-          // Only bind ends that are agent shapes (present in this skeleton set).
-          if (isAgentShape(shape.fromId)) sk.start = { id: shape.fromId }
-          if (isAgentShape(shape.toId)) sk.end = { id: shape.toId }
+          // Excalidraw can only BIND arrows to closed shapes / text — binding to
+          // a line or arrow throws and nukes the whole batch. For non-bindable
+          // targets we keep the computed geometry (the arrow still points at
+          // them) but don't create a live binding.
+          const bindable = (id?: string): boolean => {
+            const s = id ? shapes.get(id) : undefined
+            return (
+              !!s &&
+              (s.type === 'rectangle' || s.type === 'ellipse' || s.type === 'diamond' || s.type === 'text')
+            )
+          }
+          if (bindable(shape.fromId)) sk.start = { id: shape.fromId }
+          if (bindable(shape.toId)) sk.end = { id: shape.toId }
         } else {
           sk.x = shape.x ?? 0
           sk.y = shape.y ?? 0
