@@ -372,7 +372,7 @@ def extract_actions(buffer: str) -> list:
 # Models the client's dropdown can request (shared/models.ts). Anything else
 # falls back to the default.
 SUPPORTED_MODELS = {'gpt-5.2-2025-12-11', 'gpt-5-mini', 'gpt-4o'}
-DEFAULT_MODEL = 'gpt-5.2-2025-12-11'
+DEFAULT_MODEL = 'gpt-5.5'
 
 
 def get_model_name(prompt_data: dict) -> str:

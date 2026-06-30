@@ -111,15 +111,53 @@ const short = (s?: string) => (s ? s.replace(/\s+/g, ' ').slice(0, 28) : '')
 const nmeText = (t: TextItem) => (t.label ? `"${short(t.label)}"` : `text ${t.id}`)
 const nmeShape = (s: ShapeItem) => (s.label ? `${s.id} ("${short(s.label)}")` : s.id)
 
+type Box = { x: number; y: number; w: number; h: number }
+
+// A detected readability problem, with the geometry the agent needs to FIX it:
+// which element to move, where it is now, and a concrete empty spot to move it
+// to. Coordinates are absolute scene coords (the caller converts to the agent's
+// relative frame).
+export interface DetectedIssue {
+  rank: number
+  desc: string
+  moveId?: string // the element best moved to resolve this (by id)
+  moveBox?: Box // its current bounds
+  suggest?: { x: number; y: number } // a verified-empty top-left for moveId
+}
+
+// Find an empty top-left for `box` near its current position, avoiding every box
+// in `occupied`. Spirals outward from the current spot so the suggestion stays
+// close to where the element belongs. Returns null if it's already clear or
+// nothing nearby fits.
+function findFreeSpot(box: Box, occupied: Box[]): { x: number; y: number } | null {
+  const PAD = 14
+  const hits = (x: number, y: number) =>
+    occupied.some((o) =>
+      rectsOverlap(x - PAD, y - PAD, box.w + 2 * PAD, box.h + 2 * PAD, o.x, o.y, o.w, o.h)
+    )
+  if (!hits(box.x, box.y)) return null
+  const STEP = 26
+  const DIRS = [[1, 0], [0, 1], [0, -1], [-1, 0], [1, 1], [-1, 1], [1, -1], [-1, -1]]
+  for (let r = 1; r <= 18; r++) {
+    for (const [dx, dy] of DIRS) {
+      const x = box.x + dx * STEP * r
+      const y = box.y + dy * STEP * r
+      if (!hits(x, y)) return { x, y }
+    }
+  }
+  return null
+}
+
 /**
- * Returns descriptions of the overlaps that hurt readability:
+ * Returns the overlaps that hurt readability, each with the geometry needed to
+ * repair it (which element to move, its box, a free target):
  *  - text overlapping other text (including bound labels)
  *  - text sitting on top of an arrow/line
  *  - an arrow/line passing through a shape it doesn't connect
  *  - text or a shape sitting on top of a pasted image
  * Nested/overlapping shapes are intentionally NOT reported.
  */
-export function detectOverlaps(elements: readonly any[]): string[] {
+export function detectIssues(elements: readonly any[]): DetectedIssue[] {
   const texts: TextItem[] = []
   const shapes: ShapeItem[] = []
   const segs: Seg[] = []
@@ -187,7 +225,27 @@ export function detectOverlaps(elements: readonly any[]): string[] {
     }
   }
 
-  const found: { rank: number; desc: string }[] = []
+  const found: DetectedIssue[] = []
+
+  // Everything that occupies space — used to find empty spots to move things to.
+  const shapeBoxById = new Map<string, Box>()
+  for (const s of shapes) shapeBoxById.set(s.id, { x: s.x, y: s.y, w: s.w, h: s.h })
+  const occupied: (Box & { id: string })[] = [
+    ...shapes.map((s) => ({ id: s.id, x: s.x, y: s.y, w: s.w, h: s.h })),
+    ...texts.map((t) => ({ id: t.id, x: t.x, y: t.y, w: t.w, h: t.h })),
+    ...images.map((im) => ({ id: im.id, x: im.x, y: im.y, w: im.w, h: im.h })),
+  ]
+  // The agent can only move things it owns by id. A bound LABEL isn't its own
+  // agent-shape — moving its CONTAINER is what relocates it — so resolve a text
+  // to the id/box the agent can actually act on.
+  const movable = (t: TextItem): { id: string; box: Box } => {
+    if (t.containerId && shapeBoxById.has(t.containerId)) {
+      return { id: t.containerId, box: shapeBoxById.get(t.containerId)! }
+    }
+    return { id: t.id, box: { x: t.x, y: t.y, w: t.w, h: t.h } }
+  }
+  const freeFor = (m: { id: string; box: Box }) =>
+    findFreeSpot(m.box, occupied.filter((o) => o.id !== m.id)) ?? undefined
 
   // 1. Text vs text (labels colliding) — the most jarring problem.
   for (let i = 0; i < texts.length; i++) {
@@ -196,7 +254,17 @@ export function detectOverlaps(elements: readonly any[]): string[] {
       const b = texts[j]
       if (a.containerId && a.containerId === b.containerId) continue // same container
       if (textBoxesOverlap(a, b)) {
-        found.push({ rank: 1000, desc: `${nmeText(a)} overlaps ${nmeText(b)}` })
+        // Move the more free-floating of the two (prefer a standalone label over
+        // one bound inside a container).
+        const pick = a.containerId && !b.containerId ? b : a
+        const m = movable(pick)
+        found.push({
+          rank: 1000,
+          desc: `${nmeText(a)} overlaps ${nmeText(b)}`,
+          moveId: m.id,
+          moveBox: m.box,
+          suggest: freeFor(m),
+        })
       }
     }
   }
@@ -207,12 +275,20 @@ export function detectOverlaps(elements: readonly any[]): string[] {
       if (t.containerId === s.id) continue // it's the arrow's own label
       const d = pointSegDist(t.cx, t.cy, s.ax, s.ay, s.bx, s.by)
       if (d < t.h / 2 + 8) {
-        found.push({ rank: 900, desc: `${nmeText(t)} is sitting on top of arrow/line ${s.id}` })
+        const m = movable(t)
+        found.push({
+          rank: 900,
+          desc: `${nmeText(t)} is sitting on top of arrow/line ${s.id}`,
+          moveId: m.id,
+          moveBox: m.box,
+          suggest: freeFor(m),
+        })
       }
     }
   }
 
-  // 3. Arrow/line passing through a shape it does not connect.
+  // 3. Arrow/line passing through a shape it does not connect. (No move
+  //    suggestion — the right fix is usually to re-route/shorten the arrow.)
   for (const s of segs) {
     for (const sh of shapes) {
       if (s.boundIds.has(sh.id)) continue // it connects this shape — fine
@@ -233,18 +309,37 @@ export function detectOverlaps(elements: readonly any[]): string[] {
     // text on image (with padding — text needs to clear the image)
     for (const t of texts) {
       if (rectsOverlap(t.x - TEXT_PAD, t.y - TEXT_PAD, t.w + 2 * TEXT_PAD, t.h + 2 * TEXT_PAD, img.x, img.y, img.w, img.h)) {
-        found.push({ rank: 950, desc: `${nmeText(t)} is on top of image ${img.id}` })
+        const m = movable(t)
+        found.push({
+          rank: 950,
+          desc: `${nmeText(t)} is on top of image ${img.id}`,
+          moveId: m.id,
+          moveBox: m.box,
+          suggest: freeFor(m),
+        })
       }
     }
     // a shape meaningfully covering the image
     for (const sh of shapes) {
       const area = overlapArea(sh.x, sh.y, sh.w, sh.h, img.x, img.y, img.w, img.h)
       if (area > 0 && area / Math.min(Math.max(1, sh.w * sh.h), imgArea) >= 0.15) {
-        found.push({ rank: 850, desc: `${nmeShape(sh)} overlaps image ${img.id}` })
+        const box = shapeBoxById.get(sh.id)
+        found.push({
+          rank: 850,
+          desc: `${nmeShape(sh)} overlaps image ${img.id}`,
+          moveId: sh.id,
+          moveBox: box,
+          suggest: box ? freeFor({ id: sh.id, box }) : undefined,
+        })
       }
     }
   }
 
   found.sort((a, b) => b.rank - a.rank)
-  return found.slice(0, 30).map((f) => f.desc)
+  return found.slice(0, 30)
+}
+
+/** Backward-compatible string list of the same issues (used for counts/logs). */
+export function detectOverlaps(elements: readonly any[]): string[] {
+  return detectIssues(elements).map((i) => i.desc)
 }
