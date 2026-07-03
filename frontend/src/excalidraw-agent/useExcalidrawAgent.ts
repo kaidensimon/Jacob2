@@ -44,19 +44,19 @@ function settle(): Promise<void> {
 // move, where it is now, and a concrete empty coordinate to move it to — all in
 // the agent's own relative frame (origin-subtracted) so it matches the shape
 // list it sees. This is what lets it reason about a fix instead of guessing.
+// Ground a detected problem for the agent: name the problem and the element it
+// can act on (and where that element currently sits), but leave the FIX ITSELF —
+// where to move it, how big to resize it — entirely to the agent's judgement.
 function describeIssue(issue: DetectedIssue, origin: Vec): string {
   let s = issue.desc
+  if (issue.resizeId) {
+    s += ` → the shape to fix is \`${issue.resizeId}\`; resize it so the label fits (you decide the new size).`
+    return s
+  }
   if (issue.moveId && issue.moveBox) {
     const rx = Math.round(issue.moveBox.x - origin.x)
     const ry = Math.round(issue.moveBox.y - origin.y)
-    s += `\n    → to fix: move shape \`${issue.moveId}\` (currently at (${rx}, ${ry}))`
-    if (issue.suggest) {
-      const sx = Math.round(issue.suggest.x - origin.x)
-      const sy = Math.round(issue.suggest.y - origin.y)
-      s += ` to about (${sx}, ${sy}) — that spot is empty. Confirm it's still clear against the shape list, then move it there.`
-    } else {
-      s += ` into the nearest genuinely empty space (read the shape list and pick a gap where no other shape's box sits).`
-    }
+    s += ` → the element you can move is \`${issue.moveId}\` (currently at (${rx}, ${ry})). YOU decide where it should go: study the shape list and screenshot, choose a genuinely empty spot that keeps it near what it belongs to, and move it there.`
   }
   return s
 }
@@ -69,8 +69,8 @@ function describeIssue(issue: DetectedIssue, origin: Vec): string {
 function buildCritiquePrompt(request: string, issues: string[]): string {
   const work =
     issues.length > 0
-      ? 'PROBLEMS DETECTED (fix THESE, and only these, this pass — each one lists the exact shape to ' +
-        'move and an empty coordinate to move it to):\n- ' +
+      ? 'PROBLEMS DETECTED (fix THESE, and only these, this pass — each names the problem and the ' +
+        'element you can act on; deciding HOW and WHERE to fix it is up to you):\n- ' +
         issues.join('\n- ') +
         '\n'
       : 'No objective collisions were detected. Only act if you can SEE a clear STRUCTURAL break in the ' +
@@ -95,10 +95,10 @@ function buildCritiquePrompt(request: string, issues: string[]): string {
     '   • a figure whose primitives don\'t connect → a STRUCTURAL break (see below).\n' +
     '2. CHOOSE THE RIGHT OPERATION for that cause (move / resize / stack / align / distribute / delete) ' +
     '— the diagnosis dictates the tool. Do not default to nudging everything.\n' +
-    '3. VERIFY THE TARGET before moving: use the empty coordinate given, or compute one yourself from ' +
-    'the shape list, and CHECK it does not land on any other shape\'s box. If the region is genuinely ' +
-    'too crowded for the label to fit, MAKE ROOM (shift a neighbor or the whole annotation column) ' +
-    'rather than cramming — a fix that creates a new overlap is not a fix.\n' +
+    '3. CHOOSE THE TARGET yourself: read the shape list and screenshot, pick a genuinely empty spot ' +
+    'for the element (near what it belongs to), and CHECK it does not land on any other shape\'s box. ' +
+    'If the region is genuinely too crowded for the label to fit, MAKE ROOM (shift a neighbor or the ' +
+    'whole annotation column) rather than cramming — a fix that creates a new overlap is not a fix.\n' +
     '4. APPLY only the minimum edits, referencing shapes by `id`. NEVER recreate a shape you already ' +
     'made. NEVER move/delete/redraw a PLOTTED graph curve or its axes (they are exact and final).\n' +
     '5. STRUCTURAL breaks: reconnect the pieces by moving/resizing their endpoints to the EXACT join ' +
@@ -520,6 +520,36 @@ export function useExcalidrawAgent(
           break
         }
 
+        case 'expandView': {
+          // The agent ran out of room. Grow its clear drawing area WITHOUT moving
+          // the origin, so every shape it already placed keeps its coordinates —
+          // it just gains empty canvas to the right and/or below to keep working.
+          const cur = drawAreaRef.current ?? computePlacement().drawArea
+          const dir = action.direction ?? 'right'
+          const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v))
+          const dw =
+            dir === 'down' ? 0 : Math.round(clamp(action.amount ?? cur.w * 0.75, 300, 4000))
+          const dh =
+            dir === 'right' ? 0 : Math.round(clamp(action.amount ?? cur.h * 0.75, 220, 3000))
+          // Cap the total working area so it can't grow without bound.
+          const grown: Box = {
+            x: cur.x,
+            y: cur.y,
+            w: Math.min(cur.w + dw, 9000),
+            h: Math.min(cur.h + dh, 7000),
+          }
+          drawAreaRef.current = grown
+          // Extend what the agent looks at so its next screenshot covers the new
+          // space (keeping any selection it was already framing).
+          setAgentView(agentViewRef.current ? boxUnion(agentViewRef.current, grown) : grown)
+          const where = dir === 'down' ? 'downward' : dir === 'both' ? 'right & down' : 'to the right'
+          push({
+            kind: 'action',
+            text: `🗺️ Expanded my drawing area ${where} — now ${grown.w}×${grown.h}`,
+          })
+          break
+        }
+
         case 'review':
           // The model wants to take another look — drives a critique pass.
           reviewRequestedRef.current = true
@@ -568,7 +598,16 @@ export function useExcalidrawAgent(
         }
       }
     },
-    [api, applyToCanvas, applyPositions, boundsOfId, push, startMathRender, setAgentView]
+    [
+      api,
+      applyToCanvas,
+      applyPositions,
+      boundsOfId,
+      push,
+      startMathRender,
+      setAgentView,
+      computePlacement,
+    ]
   )
 
   // Run one request/response turn against the agent.
@@ -1054,7 +1093,15 @@ export function useExcalidrawAgent(
         // it back and stop — the user never sees a review pass that made things
         // worse. A stall guard stops us churning when nothing is improving.
         const reviewHistory = [...baseHistory, { role: 'user' as const, text: task }]
-        let prevIssues = Infinity
+        // Track the BEST (fewest-issue) version seen across ALL passes — not just
+        // per-pass. A single pass that regresses no longer throws away every
+        // earlier fix or halts the loop: we undo just that pass, keep going, and
+        // at the very end restore the cleanest version we ever produced. This is
+        // what stops the loop from giving up with the mess still on screen.
+        await settle()
+        await flushMathRenders()
+        let bestShapes = cloneShapes(shapesRef.current)
+        let bestIssues = detectIssues(api.getSceneElements()).length
         let stalls = 0
         for (let pass = 0; pass < MAX_REVIEW_PASSES; pass++) {
           if (controller.signal.aborted) break
@@ -1062,52 +1109,60 @@ export function useExcalidrawAgent(
           await settle()
           await flushMathRenders()
           const detected = detectIssues(api.getSceneElements())
+          const before = detected.length
           const wantsReview = reviewRequestedRef.current
 
-          // After the first (always-on) pass: stop once the canvas is objectively
-          // clean AND the model has nothing more it wants to look at.
-          if (pass > 0 && detected.length === 0 && !wantsReview) break
+          // Stop once the canvas is objectively clean and the model isn't asking to
+          // look again. (Pass 0 always runs so it reviews at least once.)
+          if (pass > 0 && before === 0 && !wantsReview) break
+          // Give up only after repeated passes that fail to beat our best.
+          if (stalls >= 2) break
 
-          // Don't spin forever on overlaps that won't reduce.
-          if (detected.length > 0) {
-            if (detected.length >= prevIssues) {
-              if (++stalls >= 2) break
-            } else {
-              stalls = 0
-            }
-            prevIssues = detected.length
-          }
-
-          // Snapshot the exact pre-pass drawing so we can undo a backfiring pass.
+          // Snapshot this pass's starting point so a backfiring pass can be undone
+          // WITHOUT ending the loop.
           const snapshot = cloneShapes(shapesRef.current)
-          const before = detected.length
-          // Ground each problem in the agent's relative frame: exact id + an empty
-          // coordinate to move it to.
+          // Ground each problem in the agent's relative frame: exact id + a
+          // verified-empty coordinate to move it to.
           const issues = detected.map((i) => describeIssue(i, originRef.current))
 
           reviewRequestedRef.current = false
           push({
             kind: 'think',
             text:
-              detected.length > 0
-                ? `Diagnosing and fixing ${detected.length} readability issue${detected.length > 1 ? 's' : ''}…`
+              before > 0
+                ? `Diagnosing and fixing ${before} readability issue${before > 1 ? 's' : ''}…`
                 : 'Reviewing the layout for clarity and balance…',
           })
           await runServiced(buildCritiquePrompt(task, issues), reviewHistory, issues)
 
-          // Re-measure. If this pass made the drawing messier, undo it and stop.
           await settle()
           await flushMathRenders()
           const after = detectIssues(api.getSceneElements()).length
-          if (after > before) {
+
+          if (after < bestIssues) {
+            // New cleanest version — remember it and reset the stall counter.
+            bestShapes = cloneShapes(shapesRef.current)
+            bestIssues = after
+            stalls = 0
+          } else if (after > before) {
+            // This pass made things worse — undo just this pass so the next one
+            // never builds on a regression, and count it against the stall budget.
             shapesRef.current = snapshot
             applyToCanvas()
-            push({
-              kind: 'think',
-              text: 'That pass added more overlap than it removed, so I undid it and kept the cleaner version.',
-            })
-            break
+            stalls++
+          } else {
+            // No net improvement; nudge the stall counter so we don't loop forever.
+            stalls++
           }
+        }
+
+        // Restore the cleanest version we saw if the canvas ended up worse.
+        await settle()
+        await flushMathRenders()
+        if (detectIssues(api.getSceneElements()).length > bestIssues) {
+          shapesRef.current = bestShapes
+          applyToCanvas()
+          push({ kind: 'think', text: 'Kept the cleanest version from my review passes.' })
         }
       } catch (err: any) {
         if (err?.name !== 'AbortError') {

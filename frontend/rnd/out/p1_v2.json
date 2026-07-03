@@ -1,0 +1,526 @@
+{
+  "label": "p1_v2",
+  "prompt": "Solve this on the whiteboard, showing full work step by step: Find the local maximum, minimum, and saddle points of the function f(x,y) = xy - 2x - 2y - x^2 - y^2. Use the second derivative (Hessian) test.",
+  "elapsed": "100",
+  "issues": [
+    {
+      "rank": 1000,
+      "desc": "\"equation f(x,y)=xy-2x-2y-x^2\" overlaps \"1) First partial derivatives\"",
+      "moveId": "given_eq",
+      "moveBox": {
+        "x": 40,
+        "y": 104,
+        "w": 349,
+        "h": 28
+      }
+    },
+    {
+      "rank": 1000,
+      "desc": "\"3) Solve for the critical po\" overlaps \"equation \\begin{aligned} x &\"",
+      "moveId": "step3_hdr",
+      "moveBox": {
+        "x": 40,
+        "y": 475,
+        "w": 288.539794921875,
+        "h": 25
+      }
+    },
+    {
+      "rank": 1000,
+      "desc": "\"Function value\" overlaps \"equation \\begin{aligned} f(-\"",
+      "moveId": "value_hdr",
+      "moveBox": {
+        "x": 560,
+        "y": 515,
+        "w": 138.85989379882812,
+        "h": 25
+      }
+    }
+  ],
+  "chat": [
+    {
+      "kind": "user",
+      "text": "Solve this on the whiteboard, showing full work step by step: Find the local maximum, minimum, and saddle points of the function f(x,y) = xy - 2x - 2y - x^2 - y^2. Use the second derivative (Hessian) test."
+    },
+    {
+      "kind": "think",
+      "text": "I'll create a clean vertical worked solution: compute first derivatives, solve the critical point, compute the Hessian entries and determinant, then classify with the second derivative test and state the local maximum."
+    },
+    {
+      "kind": "action",
+      "text": "Drew text “Local extrema via Hessian test”"
+    },
+    {
+      "kind": "action",
+      "text": "Drew text “Function”"
+    },
+    {
+      "kind": "action",
+      "text": "Typeset an equation"
+    },
+    {
+      "kind": "action",
+      "text": "Drew text “1) First partial derivatives”"
+    },
+    {
+      "kind": "action",
+      "text": "Typeset an equation"
+    },
+    {
+      "kind": "action",
+      "text": "Drew text “2) Set gradient equal to zero”"
+    },
+    {
+      "kind": "action",
+      "text": "Typeset an equation"
+    },
+    {
+      "kind": "action",
+      "text": "Drew text “3) Solve for the critical point”"
+    },
+    {
+      "kind": "action",
+      "text": "Typeset an equation"
+    },
+    {
+      "kind": "action",
+      "text": "Drew text “4) Hessian test”"
+    },
+    {
+      "kind": "action",
+      "text": "Typeset an equation"
+    },
+    {
+      "kind": "action",
+      "text": "Drew text “Discriminant”"
+    },
+    {
+      "kind": "action",
+      "text": "Typeset an equation"
+    },
+    {
+      "kind": "action",
+      "text": "Drew text “Classification rule”"
+    },
+    {
+      "kind": "action",
+      "text": "Typeset an equation"
+    },
+    {
+      "kind": "action",
+      "text": "Drew text “Function value”"
+    },
+    {
+      "kind": "action",
+      "text": "Typeset an equation"
+    },
+    {
+      "kind": "action",
+      "text": "Drew text “Answer”"
+    },
+    {
+      "kind": "action",
+      "text": "Typeset an equation"
+    },
+    {
+      "kind": "action",
+      "text": "Typeset an equation"
+    },
+    {
+      "kind": "message",
+      "text": "I laid out the Hessian test solution: the only critical point is (-2,-2), the discriminant is positive, and since fxx is negative, it is a local maximum with value 4."
+    },
+    {
+      "kind": "think",
+      "text": "Diagnosing and fixing 11 readability issues…"
+    },
+    {
+      "kind": "think",
+      "text": "For the title/header issue, the detected overlap comes from text bounding boxes being too close at the top of the left column. The title belongs above the whole solution; moving it slightly higher/left would risk the canvas edge, so the safer minimal repair is to move it a bit upward to create more vertical separation from the Function header without affecting other elements."
+    },
+    {
+      "kind": "action",
+      "text": "Moved title"
+    },
+    {
+      "kind": "think",
+      "text": "The Function header is a label sitting too close to its equation; it needs to stay directly above the given function but with more clearance. Moving it upward slightly, still below the title and above the equation, fixes the local label-on-equation overlap."
+    },
+    {
+      "kind": "action",
+      "text": "Moved given_hdr"
+    },
+    {
+      "kind": "think",
+      "text": "The first-derivatives header is too close to its math block. This is a label-on-math spacing issue, not a column-wide pileup. Move the header upward within the empty gap below the given function so it remains near the derivative equations but clears them."
+    },
+    {
+      "kind": "action",
+      "text": "Moved step1_hdr"
+    },
+    {
+      "kind": "think",
+      "text": "The gradient header is too close to the following equations. There is empty space above it after the first derivative block, so moving the header upward gives the equations a clean gap while preserving the step order."
+    },
+    {
+      "kind": "action",
+      "text": "Moved step2_hdr"
+    },
+    {
+      "kind": "think",
+      "text": "The critical-point header overlaps the tall solving math because the header sits too close to the rendered aligned equations. Move it upward into the available gap after step 2, keeping it attached to the solve step without landing on the previous math."
+    },
+    {
+      "kind": "action",
+      "text": "Moved step3_hdr"
+    },
+    {
+      "kind": "think",
+      "text": "The Hessian-test header is too close to its partial-second-derivative block. It should stay at the top of the right column, so move it upward slightly while keeping it aligned with that column and clear of the title."
+    },
+    {
+      "kind": "action",
+      "text": "Moved hess_hdr"
+    },
+    {
+      "kind": "think",
+      "text": "The Discriminant header is a section label placed too close to the D computation. Move it upward into the empty space below the Hessian derivative block, preserving the right-column flow."
+    },
+    {
+      "kind": "action",
+      "text": "Moved det_hdr"
+    },
+    {
+      "kind": "think",
+      "text": "The Classification rule header is too close to the single-line rule. It can move upward into the gap below the discriminant computation so it remains readable and does not collide with the math."
+    },
+    {
+      "kind": "action",
+      "text": "Moved class_hdr"
+    },
+    {
+      "kind": "think",
+      "text": "The Function value header sits too close to the value computation. Move it upward within the open space below the classification rule, keeping the value section grouped and clear."
+    },
+    {
+      "kind": "action",
+      "text": "Moved value_hdr"
+    },
+    {
+      "kind": "think",
+      "text": "The Answer header overlaps the boxed answer because it is too close vertically. Move the header upward into the gap below the function value computation, leaving room for the boxed result below."
+    },
+    {
+      "kind": "action",
+      "text": "Moved answer_hdr"
+    },
+    {
+      "kind": "think",
+      "text": "The boxed answer overlaps the final note because the answer section is vertically tight near the bottom. The only allowed movable element is the boxed answer; move it upward enough to clear the note while keeping it under the Answer header and not colliding with the value section."
+    },
+    {
+      "kind": "action",
+      "text": "Moved answer_eq"
+    },
+    {
+      "kind": "message",
+      "text": "The solution shows the Hessian test step by step: the gradient equations give the only critical point, (-2,-2). The Hessian has discriminant D=3>0 and f_xx=-2<0, so that point is a local maximum. Its function value is 4, and there are no local minima or saddle points."
+    },
+    {
+      "kind": "think",
+      "text": "Diagnosing and fixing 8 readability issues…"
+    },
+    {
+      "kind": "think",
+      "text": "Function/given equation: the header is directly above its equation with the detector treating the vertical spacing as too tight. The root cause is a math element rendering taller than expected in a tight vertical column. Best repair is to stack the left-column step groups with larger vertical gaps rather than nudging individual labels into nearby content."
+    },
+    {
+      "kind": "think",
+      "text": "Given equation/step 1 header: this is the same left-column spacing problem. I will keep the left column order but increase the vertical gaps between header and formula blocks so each section has clear whitespace."
+    },
+    {
+      "kind": "think",
+      "text": "Step 1 header/step 1 equation: also a tight section gap. I will move the named headers/equation positions downward in a controlled column layout, preserving alignment at x=40 and avoiding the right column."
+    },
+    {
+      "kind": "think",
+      "text": "Step 2 header/step 2 equation: same cause, so the right operation is a column re-stack with larger gaps, not a small nudge. I will place step 2 header and following content lower with safe clearance."
+    },
+    {
+      "kind": "action",
+      "text": "Moved given_hdr"
+    },
+    {
+      "kind": "action",
+      "text": "Moved given_eq"
+    },
+    {
+      "kind": "action",
+      "text": "Moved step1_hdr"
+    },
+    {
+      "kind": "action",
+      "text": "Moved step2_hdr"
+    },
+    {
+      "kind": "think",
+      "text": "Hessian header/equation: the right column has the same tight header-to-math spacing. The header belongs above the Hessian derivatives in the right column. I will move only the named header slightly upward to create more vertical clearance without disrupting the rest."
+    },
+    {
+      "kind": "action",
+      "text": "Moved hess_hdr"
+    },
+    {
+      "kind": "think",
+      "text": "Discriminant header/equation: the header is too close to the math below. Since the right-column sequence is slightly tight, I will move the named discriminant header upward into the clear gap below the Hessian derivatives, keeping it near the equation and aligned with the column."
+    },
+    {
+      "kind": "action",
+      "text": "Moved det_hdr"
+    },
+    {
+      "kind": "think",
+      "text": "Discriminant equation/classification header: the discriminant math renders taller than expected and crowds the next header. The listed element I can act on is det_eq, so I will move that equation upward enough to clear the classification header while keeping it under the discriminant label and away from the Hessian block."
+    },
+    {
+      "kind": "action",
+      "text": "Moved det_eq"
+    },
+    {
+      "kind": "think",
+      "text": "Answer header/boxed answer: the header is too close to the boxed result. The header should sit just above the answer with a small but clear gap, and moving it upward is the smallest safe edit because the boxed answer and final note already read well."
+    },
+    {
+      "kind": "action",
+      "text": "Moved answer_hdr"
+    },
+    {
+      "kind": "message",
+      "text": "The work shows the Hessian-test process: compute the first partial derivatives, solve ∇f=0 to get the only critical point (-2,-2), then use D=fxxfyy-(fxy)^2. Since D=3>0 and fxx=-2<0, the critical point is a local maximum, with value f(-2,-2)=4. Therefore there are no local minima or saddle points."
+    },
+    {
+      "kind": "think",
+      "text": "Diagnosing and fixing 8 readability issues…"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 1: the title is close to the Function header because the top of the left column is tight, but visually the title is already separated enough and moving it would detach it from the solution. Since the actionable element is only the title, the safest repair is a small upward move to increase the gap while keeping it as the page heading."
+    },
+    {
+      "kind": "action",
+      "text": "Moved title"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 2: the Function label sits above the function equation; this is intended, but the detected boxes are too close. Move the header slightly upward within the same left column so it remains the section label and clears the formula."
+    },
+    {
+      "kind": "action",
+      "text": "Moved given_hdr"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 3: the given equation is between the Function header and step 1 header; the vertical spacing is a little tight. Move the equation slightly upward to sit under the Function label while preserving space before the first derivative step."
+    },
+    {
+      "kind": "action",
+      "text": "Moved given_eq"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 4: the step 2 header is too close to its equation below. The header should remain directly above that work, so move only the header upward into the whitespace after step 1 rather than shifting the whole column."
+    },
+    {
+      "kind": "action",
+      "text": "Moved step2_hdr"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 5: the Hessian derivative block renders taller than expected and nearly reaches the Discriminant header. Since only hess_eq may be moved, move it upward slightly under the Hessian heading, keeping it in the right column and away from the next section."
+    },
+    {
+      "kind": "action",
+      "text": "Moved hess_eq"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 6: the Discriminant header is too close to the discriminant computation below. Move the header upward into the newly opened space below the Hessian derivatives, keeping it aligned with the right column."
+    },
+    {
+      "kind": "action",
+      "text": "Moved det_hdr"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 7: the function-value computation is large and comes close to the Answer header. Moving the equation up would collide with its own header or classification, and moving it down would worsen the answer collision. The best minimal repair allowed is to move it slightly upward into the available gap under Function value while keeping it with its section."
+    },
+    {
+      "kind": "action",
+      "text": "Moved value_eq"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 8: the Answer header is placed too close to the boxed final answer. Move the header down just enough to sit clearly below the function-value computation and above the boxed result without landing on either."
+    },
+    {
+      "kind": "action",
+      "text": "Moved answer_hdr"
+    },
+    {
+      "kind": "message",
+      "text": "The work shows the Hessian test step by step: first the gradient equations give the single critical point \\((-2,-2)\\). Then the Hessian has discriminant \\(D=3>0\\) and \\(f_{xx}<0\\), so that point is a local maximum. Evaluating the function there gives value \\(4\\), and because there are no other critical points, there are no local minima or saddle points."
+    },
+    {
+      "kind": "think",
+      "text": "Diagnosing and fixing 7 readability issues…"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 1: the title at y=5 is vertically too close to the Function header at y=62 according to the overlap detector. This is a top-of-column spacing issue, not a math-stack problem. The safest minimal repair is to move the title slightly higher/left within empty top space so its bounding box ends well above the Function header without touching anything else."
+    },
+    {
+      "kind": "action",
+      "text": "Moved title"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 2: the Function header at y=62 sits too close to the function equation beginning at y=104. It belongs directly above the equation, but needs more vertical breathing room. Moving only the header upward to an empty band below the title keeps it near the equation and avoids the equation box."
+    },
+    {
+      "kind": "action",
+      "text": "Moved given_hdr"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 3: the Step 2 header at y=320 is too close to the Step 2 equation at y=370. This is a header-label spacing issue, not a crowded column requiring restacking. Move the header slightly upward into the empty gap after the Step 1 equations, keeping it aligned with the left column."
+    },
+    {
+      "kind": "action",
+      "text": "Moved step2_hdr"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 4: the Hessian test header at y=65 is too close to its derivative equations at y=112. It belongs above them in the right column. Move the header upward into clear space near the top of the right column without touching the title or function area."
+    },
+    {
+      "kind": "action",
+      "text": "Moved hess_hdr"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 5: the Hessian derivative equation block at y=112 renders tall and nearly touches the Discriminant header at y=222. The right column section is slightly tight here. The named movable element is hess_eq, so move it upward a bit into the newly opened space below the Hessian header, leaving a larger gap before Discriminant."
+    },
+    {
+      "kind": "action",
+      "text": "Moved hess_eq"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 6: the Function value header at y=535 is too close to the evaluation equation at y=575. It should remain above the value computation but needs more clearance. Move the header upward into the empty gap below the classification line."
+    },
+    {
+      "kind": "action",
+      "text": "Moved value_hdr"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 7: the Answer header at y=710 is too close to the boxed answer equation at y=755. The answer section has enough whitespace above it, so move only the header upward slightly while keeping it aligned with the right-column answer block."
+    },
+    {
+      "kind": "action",
+      "text": "Moved answer_hdr"
+    },
+    {
+      "kind": "message",
+      "text": "This step-by-step solution finds the only critical point by setting both first partial derivatives to zero, then applies the Hessian test. Since the discriminant is positive and fxx is negative, the critical point (-2,-2) is a local maximum with value 4. There are no local minima or saddle points."
+    },
+    {
+      "kind": "think",
+      "text": "Diagnosing and fixing 5 readability issues…"
+    },
+    {
+      "kind": "think",
+      "text": "The title at y=0 has a 35px height and the Function header starts at y=52, but the handwritten text visually extends enough that the automatic detector sees them touching. This is a label spacing issue at the top of the left column. The safest repair is to move only the title slightly higher into empty top space is impossible without negative y, so instead move it a little right/up? It is already at top. Since only title may be acted on, the better safe move is to place the title at the top center/right empty band, away from the Function header and not over the Hessian column."
+    },
+    {
+      "kind": "action",
+      "text": "Moved title"
+    },
+    {
+      "kind": "think",
+      "text": "The Function header at y=52 overlaps the function equation at y=104 because the header-to-equation spacing is too tight for rendered handwritten/text extents. This is a label placed too close to its equation. Only given_hdr may be moved, so I will move it left-column near the function but into empty space above the equation with more vertical clearance: y=60 is still close; y=48 causes title conflict. Better target is x=40,y=68? That pushes it closer to equation. Instead move the header slightly right into the blank space beside the equation line, keeping it near the function and off the equation box."
+    },
+    {
+      "kind": "action",
+      "text": "Moved given_hdr"
+    },
+    {
+      "kind": "think",
+      "text": "The first-derivatives math at y=225 visually extends into the Step 2 header at y=305 because math renders taller than expected. This is a too-tight vertical column issue, but the instruction names only step1_eq as movable. I will move the equation upward into the open gap below the Step 1 header and above Step 2, giving it more clearance from Step 2 while keeping it associated with Step 1."
+    },
+    {
+      "kind": "action",
+      "text": "Moved step1_eq"
+    },
+    {
+      "kind": "think",
+      "text": "The Hessian header at y=52 overlaps its equation at y=100 because the header is too close to the equation beneath it. This is another label-to-equation spacing issue. Only hess_hdr may be moved, so I will move it upward into clear space at the top of the right column, above the derivatives and not into the centered title."
+    },
+    {
+      "kind": "action",
+      "text": "Moved hess_hdr"
+    },
+    {
+      "kind": "think",
+      "text": "The function-value equation at y=575 overlaps the Answer header at y=690 because the multi-line math block renders taller than expected and the lower right column is tight. Since only value_eq may be moved, moving it upward would collide with its header or classification, and moving it downward would worsen the answer overlap. The safest target is to move this equation to the open left-side lower area beneath the critical point work, where it remains visible and does not cover the answer section."
+    },
+    {
+      "kind": "action",
+      "text": "Moved value_eq"
+    },
+    {
+      "kind": "message",
+      "text": "This solution finds the only critical point by setting both first partial derivatives to zero, then applies the Hessian test. Since the discriminant is positive and fxx is negative, the critical point (-2, -2) is a local maximum, with value 4. There are no local minima or saddle points."
+    },
+    {
+      "kind": "think",
+      "text": "Diagnosing and fixing 5 readability issues…"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 1 diagnosis: the title at y=0 is too close to the right-column Hessian header at y=25, so the two labels collide vertically. The correct operation is to move the title to empty top-left space above the main function area, away from the Hessian column, while keeping it as the overall heading."
+    },
+    {
+      "kind": "action",
+      "text": "Moved title"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 2 diagnosis: the step 1 header is placed almost directly on top of its derivative math; the math begins at y=205 and the header height extends too close. The correct operation is to move the header upward into the empty gap after the function line, keeping it above its equations with clear spacing."
+    },
+    {
+      "kind": "action",
+      "text": "Moved step1_hdr"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 3 diagnosis: the critical-point math block is taller than expected and its bottom reaches the function-value math below, so the left column is too tight. Only step3_eq is allowed for this problem, so I will move it slightly upward into the large gap beneath its header, preserving association and opening space below without touching other shapes."
+    },
+    {
+      "kind": "action",
+      "text": "Moved step3_eq"
+    },
+    {
+      "kind": "think",
+      "text": "Problems 4 and 5 diagnosis: the function-value equation is sitting in the left column where it overlaps both the answer header and the boxed answer on the right. The right column already has a Function value header at x=560,y=515 with empty space beneath it before the Answer section; the correct operation is to move value_eq under that header, where it belongs, and keep it above the answer block."
+    },
+    {
+      "kind": "action",
+      "text": "Moved value_eq"
+    },
+    {
+      "kind": "message",
+      "text": "The work shows the Hessian test step by step: compute the gradient, solve it to get the only critical point (-2,-2), then use D=fxxfyy-(fxy)^2=3>0 with fxx<0 to classify it as a local maximum. Evaluating the function gives f(-2,-2)=4, so there are no local minima or saddle points."
+    }
+  ]
+}

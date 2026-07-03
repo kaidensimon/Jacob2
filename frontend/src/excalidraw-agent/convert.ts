@@ -49,6 +49,69 @@ function centerOf(b: Bounds): { x: number; y: number } {
   return { x: b.x + b.width / 2, y: b.y + b.height / 2 }
 }
 
+// The point on box `b`'s border along the ray from its center toward `toward`,
+// pushed out by `gap`. Used to clip a connector to a shape's edge so it runs in
+// the empty space between shapes instead of stabbing through their interiors and
+// centered labels. (Rectangle border; a good-enough approximation for ellipse /
+// diamond, which the gap absorbs.)
+function edgePoint(
+  b: Bounds,
+  toward: { x: number; y: number },
+  gap: number
+): { x: number; y: number } {
+  const c = centerOf(b)
+  const dx = toward.x - c.x
+  const dy = toward.y - c.y
+  if (dx === 0 && dy === 0) return c
+  const hw = b.width / 2
+  const hh = b.height / 2
+  // Scale the direction so it lands exactly on the rectangle border.
+  const s = Math.min(
+    dx !== 0 ? hw / Math.abs(dx) : Infinity,
+    dy !== 0 ? hh / Math.abs(dy) : Infinity
+  )
+  const len = Math.hypot(dx, dy)
+  return { x: c.x + dx * s + (dx / len) * gap, y: c.y + dy * s + (dy / len) * gap }
+}
+
+// Measure a label's widest line in px using the canvas 2D API (browser only).
+let _measureCtx: CanvasRenderingContext2D | null = null
+function measureTextWidth(text: string, fontSize: number): number {
+  if (typeof document === 'undefined') return text.length * fontSize * 0.55
+  if (!_measureCtx) _measureCtx = document.createElement('canvas').getContext('2d')
+  if (!_measureCtx) return text.length * fontSize * 0.55
+  _measureCtx.font = `${fontSize}px Excalifont, Virgil, "Segoe UI", sans-serif`
+  let w = 0
+  for (const line of String(text).split('\n')) w = Math.max(w, _measureCtx.measureText(line).width)
+  return w * 1.08 // small fudge for the hand-drawn font's wider glyphs
+}
+
+// Ensure a labelled container is big enough that a short label sits on ONE line
+// instead of wrapping mid-word or getting clipped (the model routinely makes
+// boxes too narrow). Only ever ENLARGES; long labels are still allowed to wrap.
+function fitLabelledContainer(
+  type: 'rectangle' | 'ellipse' | 'diamond',
+  text: string,
+  width: number,
+  height: number
+): { width: number; height: number } {
+  const label = text.trim()
+  if (!label) return { width, height }
+  const fontSize = 20 // Excalidraw MEDIUM — the default bound-text size
+  const words = label.split(/\s+/)
+  const longestWord = words.reduce((m, w) => Math.max(m, measureTextWidth(w, fontSize)), 0)
+  const full = measureTextWidth(label, fontSize)
+  const PAD = 26
+  // Fraction of the container's box that centered text can actually use.
+  const frac = type === 'diamond' ? 0.55 : type === 'ellipse' ? 0.72 : 0.9
+  // Fit the whole label on one line if it's short; otherwise at least the
+  // longest single word (so no word breaks across lines).
+  const target = (label.length <= 24 ? full : longestWord) + PAD
+  const minW = Math.ceil(target / frac)
+  const minH = Math.ceil((fontSize * 1.5 + PAD) / (type === 'rectangle' ? 1 : 0.7))
+  return { width: Math.max(width, minW), height: Math.max(height, minH) }
+}
+
 function commonStyle(shape: AgentShape): Skeleton {
   const s: Skeleton = {}
   if (shape.strokeColor) s.strokeColor = shape.strokeColor
@@ -85,13 +148,21 @@ export function buildSkeletons(
       case 'rectangle':
       case 'ellipse':
       case 'diamond': {
+        const fitted = shape.text
+          ? fitLabelledContainer(
+              shape.type,
+              fixCanvasGlyphs(shape.text),
+              shape.width ?? DEFAULT_W,
+              shape.height ?? DEFAULT_H
+            )
+          : { width: shape.width ?? DEFAULT_W, height: shape.height ?? DEFAULT_H }
         skeletons.push({
           type: shape.type,
           id: shape.id,
           x: shape.x ?? 0,
           y: shape.y ?? 0,
-          width: shape.width ?? DEFAULT_W,
-          height: shape.height ?? DEFAULT_H,
+          width: fitted.width,
+          height: fitted.height,
           ...(shape.text ? { label: { text: fixCanvasGlyphs(shape.text) } } : {}),
           ...commonStyle(shape),
         })
@@ -141,9 +212,16 @@ export function buildSkeletons(
         const toB = boundsOf(shape.toId)
 
         if (shape.type === 'arrow' && (fromB || toB)) {
-          // Anchor/geometry from whatever endpoints we can resolve.
-          const a = fromB ? centerOf(fromB) : centerOf(toB!)
-          const b = toB ? centerOf(toB) : centerOf(fromB!)
+          // Clip each bound endpoint to its shape's border (+gap) so the arrow
+          // runs edge-to-edge through the EMPTY space between shapes, never
+          // through their interiors or centered labels. A bound endpoint uses the
+          // OTHER endpoint's center as its aim; an unbound endpoint stays at the
+          // resolved center.
+          const GAP = 6
+          const ca = fromB ? centerOf(fromB) : centerOf(toB!)
+          const cb = toB ? centerOf(toB) : centerOf(fromB!)
+          const a = fromB ? edgePoint(fromB, cb, GAP) : ca
+          const b = toB ? edgePoint(toB, ca, GAP) : cb
           sk.x = a.x
           sk.y = a.y
           sk.points = [

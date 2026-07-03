@@ -43,7 +43,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className={styles.container}>
+    <div className={`${styles.container} lg-aurora`}>
       <header className={styles.header}>
         <span className={styles.greeting}>
           Hello, {user?.full_name || user?.email}

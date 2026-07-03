@@ -1,0 +1,248 @@
+{
+  "label": "03_neural_net",
+  "prompt": "Draw a neural network diagram: an input layer with 3 nodes, two hidden layers with 4 nodes each, and an output layer with 2 nodes. Draw each node as a circle and connect every node in a layer to every node in the next layer.",
+  "elapsed": "35",
+  "issues": [],
+  "chat": [
+    {
+      "kind": "user",
+      "text": "Draw a neural network diagram: an input layer with 3 nodes, two hidden layers with 4 nodes each, and an output layer with 2 nodes. Draw each node as a circle and connect every node in a layer to every node in the next layer."
+    },
+    {
+      "kind": "think",
+      "text": "I'll draw four vertical layers of circular nodes, label each layer, and connect every node in one layer to every node in the next with thin arrows/lines."
+    },
+    {
+      "kind": "action",
+      "text": "Drew text “Feedforward Neural Network”"
+    },
+    {
+      "kind": "action",
+      "text": "Drew text “Input layer”"
+    },
+    {
+      "kind": "action",
+      "text": "Drew text “Hidden layer 1”"
+    },
+    {
+      "kind": "action",
+      "text": "Drew text “Hidden layer 2”"
+    },
+    {
+      "kind": "action",
+      "text": "Drew text “Output layer”"
+    },
+    {
+      "kind": "action",
+      "text": "Drew ellipse “x₁”"
+    },
+    {
+      "kind": "action",
+      "text": "Drew ellipse “x₂”"
+    },
+    {
+      "kind": "action",
+      "text": "Drew ellipse “x₃”"
+    },
+    {
+      "kind": "action",
+      "text": "Drew ellipse"
+    },
+    {
+      "kind": "action",
+      "text": "Drew ellipse"
+    },
+    {
+      "kind": "action",
+      "text": "Drew ellipse"
+    },
+    {
+      "kind": "action",
+      "text": "Drew ellipse"
+    },
+    {
+      "kind": "action",
+      "text": "Drew ellipse"
+    },
+    {
+      "kind": "action",
+      "text": "Drew ellipse"
+    },
+    {
+      "kind": "action",
+      "text": "Drew ellipse"
+    },
+    {
+      "kind": "action",
+      "text": "Drew ellipse"
+    },
+    {
+      "kind": "action",
+      "text": "Drew ellipse “y₁”"
+    },
+    {
+      "kind": "action",
+      "text": "Drew ellipse “y₂”"
+    },
+    {
+      "kind": "action",
+      "text": "Arrow i1 → h1_1"
+    },
+    {
+      "kind": "action",
+      "text": "Arrow i1 → h1_2"
+    },
+    {
+      "kind": "action",
+      "text": "Arrow i1 → h1_3"
+    },
+    {
+      "kind": "action",
+      "text": "Arrow i1 → h1_4"
+    },
+    {
+      "kind": "action",
+      "text": "Arrow i2 → h1_1"
+    },
+    {
+      "kind": "action",
+      "text": "Arrow i2 → h1_2"
+    },
+    {
+      "kind": "action",
+      "text": "Arrow i2 → h1_3"
+    },
+    {
+      "kind": "action",
+      "text": "Arrow i2 → h1_4"
+    },
+    {
+      "kind": "action",
+      "text": "Arrow i3 → h1_1"
+    },
+    {
+      "kind": "action",
+      "text": "Arrow i3 → h1_2"
+    },
+    {
+      "kind": "action",
+      "text": "Arrow i3 → h1_3"
+    },
+    {
+      "kind": "action",
+      "text": "Arrow i3 → h1_4"
+    },
+    {
+      "kind": "action",
+      "text": "Arrow h1_1 → h2_1"
+    },
+    {
+      "kind": "action",
+      "text": "Arrow h1_1 → h2_2"
+    },
+    {
+      "kind": "action",
+      "text": "Arrow h1_1 → h2_3"
+    },
+    {
+      "kind": "action",
+      "text": "Arrow h1_1 → h2_4"
+    },
+    {
+      "kind": "action",
+      "text": "Arrow h1_2 → h2_1"
+    },
+    {
+      "kind": "action",
+      "text": "Arrow h1_2 → h2_2"
+    },
+    {
+      "kind": "action",
+      "text": "Arrow h1_2 → h2_3"
+    },
+    {
+      "kind": "action",
+      "text": "Arrow h1_2 → h2_4"
+    },
+    {
+      "kind": "action",
+      "text": "Arrow h1_3 → h2_1"
+    },
+    {
+      "kind": "action",
+      "text": "Arrow h1_3 → h2_2"
+    },
+    {
+      "kind": "action",
+      "text": "Arrow h1_3 → h2_3"
+    },
+    {
+      "kind": "action",
+      "text": "Arrow h1_3 → h2_4"
+    },
+    {
+      "kind": "action",
+      "text": "Arrow h1_4 → h2_1"
+    },
+    {
+      "kind": "action",
+      "text": "Arrow h1_4 → h2_2"
+    },
+    {
+      "kind": "action",
+      "text": "Arrow h1_4 → h2_3"
+    },
+    {
+      "kind": "action",
+      "text": "Arrow h1_4 → h2_4"
+    },
+    {
+      "kind": "action",
+      "text": "Arrow h2_1 → o1"
+    },
+    {
+      "kind": "action",
+      "text": "Arrow h2_1 → o2"
+    },
+    {
+      "kind": "action",
+      "text": "Arrow h2_2 → o1"
+    },
+    {
+      "kind": "action",
+      "text": "Arrow h2_2 → o2"
+    },
+    {
+      "kind": "action",
+      "text": "Arrow h2_3 → o1"
+    },
+    {
+      "kind": "action",
+      "text": "Arrow h2_3 → o2"
+    },
+    {
+      "kind": "action",
+      "text": "Arrow h2_4 → o1"
+    },
+    {
+      "kind": "action",
+      "text": "Arrow h2_4 → o2"
+    },
+    {
+      "kind": "message",
+      "text": "This diagram shows a feedforward neural network: three input features flow through two fully connected hidden layers, then into two output nodes. Every arrow represents a learned weight connecting one layer to the next."
+    },
+    {
+      "kind": "think",
+      "text": "Reviewing the layout for clarity and balance…"
+    },
+    {
+      "kind": "think",
+      "text": "The neural network diagram already reads cleanly: 3 input nodes, two hidden layers with 4 nodes each, and 2 output nodes are arranged in columns, with full feedforward connections between adjacent layers. No structural breaks, disconnected primitives, cut-off labels, or harmful overlaps are visible, so no repair is needed."
+    },
+    {
+      "kind": "message",
+      "text": "This diagram shows a feedforward neural network: information flows left to right from three input features, through two fully connected hidden layers of four neurons each, and finally to two output nodes. Every node in one layer connects to every node in the next layer, illustrating dense layer-to-layer computation."
+    }
+  ]
+}

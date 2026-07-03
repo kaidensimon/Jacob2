@@ -55,7 +55,7 @@ def _load_bad_keyframe_examples():
     return examples
 
 
-MANIM_MODEL = 'gpt-5.2-2025-12-11'
+MANIM_MODEL = 'gpt-5.5'
 RENDER_QUALITY = '-ql'  # 480p15 — fast & reliable; fine for a chat-embedded video
 TOTAL_BUDGET = 300        # ~5 minutes total
 RENDER_CAP = 160          # max seconds for any single render

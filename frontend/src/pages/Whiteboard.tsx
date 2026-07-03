@@ -71,6 +71,51 @@ export default function Whiteboard() {
 
   const agent = useExcalidrawAgent(api, openGrapher)
 
+  // ── Dev-only R&D test bridge ────────────────────────────────────────────────
+  // Exposes the Excalidraw API + agent handles on `window.__ex` so the Playwright
+  // harness can send prompts, know when generation finishes, export the whole
+  // scene to PNG, and run the real overlap detector. Stripped from prod builds.
+  useEffect(() => {
+    if (!import.meta.env.DEV) return
+    ;(window as any).__ex = {
+      api,
+      send: agent.sendMessage,
+      stop: agent.stop,
+      newChat: agent.newChat,
+      // Full reset for isolated test runs: wipe the canvas AND the agent state.
+      reset() {
+        agent.newChat()
+        api?.updateScene({ elements: [] })
+      },
+      isGenerating: agent.isGenerating,
+      chat: agent.chat,
+      agentView: agent.agentView,
+      async exportScene() {
+        if (!api) return null
+        const els = api.getSceneElements().filter((e) => !e.isDeleted)
+        if (els.length === 0) return null
+        const blob = await exportToBlob({
+          elements: els,
+          appState: { ...api.getAppState(), exportBackground: true },
+          files: api.getFiles(),
+          mimeType: 'image/png',
+          exportPadding: 24,
+          getDimensions: (w: number, h: number) => {
+            const max = 1600
+            const s = Math.min(1, max / Math.max(w, h))
+            return { width: w * s, height: h * s, scale: s }
+          },
+        })
+        return await blobToDataUrl(blob)
+      },
+      async issues() {
+        if (!api) return []
+        const { detectIssues } = await import('../excalidraw-agent/detect')
+        return detectIssues(api.getSceneElements())
+      },
+    }
+  }, [api, agent.sendMessage, agent.stop, agent.newChat, agent.isGenerating, agent.chat, agent.agentView])
+
   // Load the scene: from the account if ?session=<id>, else from localStorage.
   useEffect(() => {
     let cancelled = false
