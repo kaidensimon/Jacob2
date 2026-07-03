@@ -11,6 +11,7 @@ import { useExcalidrawAgent } from '../excalidraw-agent/useExcalidrawAgent'
 import { AgentViewOverlay } from '../excalidraw-agent/AgentViewOverlay'
 import { GrapherModal } from '../grapher/GrapherModal'
 import { GrapherBoundary } from '../grapher/GrapherBoundary'
+import { useLessonPlayer } from '../lesson/useLessonPlayer'
 
 const STORAGE_KEY = 'excalidraw-session'
 
@@ -70,6 +71,7 @@ export default function Whiteboard() {
   )
 
   const agent = useExcalidrawAgent(api, openGrapher)
+  const lesson = useLessonPlayer(api)
 
   // ── Dev-only R&D test bridge ────────────────────────────────────────────────
   // Exposes the Excalidraw API + agent handles on `window.__ex` so the Playwright
@@ -291,6 +293,20 @@ export default function Whiteboard() {
           </WelcomeScreen>
         </Excalidraw>
 
+        {lesson.caption && (
+          <div
+            style={{
+              position: 'absolute', bottom: 24, left: '50%', transform: 'translateX(-50%)',
+              zIndex: 6, maxWidth: '72%', textAlign: 'center',
+              background: 'rgba(23,19,52,0.82)', color: '#fff', borderRadius: 12,
+              padding: '10px 18px', fontSize: 15, lineHeight: 1.4,
+              backdropFilter: 'blur(8px)', boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+            }}
+          >
+            {lesson.caption}
+          </div>
+        )}
+
         <AgentViewOverlay
           api={api}
           view={agent.agentView}
@@ -343,6 +359,12 @@ export default function Whiteboard() {
           onNewChat={agent.newChat}
           onSaveAnimation={agent.respondToSavePrompt}
           onOpenGrapher={openGrapher}
+          voiceTutor={{
+            on: lesson.voiceOn,
+            toggle: lesson.toggleVoice,
+            status: lesson.status,
+            transcript: lesson.transcript,
+          }}
         />
       </div>
 

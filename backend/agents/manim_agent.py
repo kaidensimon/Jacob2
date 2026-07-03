@@ -21,7 +21,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
-from .models import Animation
+from accounts.models import Animation
 logger = logging.getLogger(__name__)
 if not logger.handlers:
     handler = logging.StreamHandler()

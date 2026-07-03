@@ -15,6 +15,8 @@ DEBUG = True
 ALLOWED_HOSTS = ['*']
 
 INSTALLED_APPS = [
+    'daphne',  # must precede django.contrib.staticfiles to serve ASGI (WS + HTTP)
+    'channels',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -25,6 +27,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'corsheaders',
     'accounts',
+    'agents',
 ]
 
 MIDDLEWARE = [
@@ -57,6 +60,13 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'core.wsgi.application'
+ASGI_APPLICATION = 'core.asgi.application'
+
+# Single-process in-memory channel layer (no Redis needed — each lesson is driven
+# by its own consumer connection; there is no cross-consumer fan-out).
+CHANNEL_LAYERS = {
+    'default': {'BACKEND': 'channels.layers.InMemoryChannelLayer'},
+}
 
 DATABASES = {
     'default': {

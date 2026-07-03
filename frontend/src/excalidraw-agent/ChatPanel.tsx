@@ -3,6 +3,13 @@ import type { FormEvent } from 'react'
 import type { ChatItem } from './types'
 import './chat.css'
 
+interface VoiceTutor {
+  on: boolean
+  toggle: () => void
+  status: string
+  transcript: string
+}
+
 interface Props {
   chat: ChatItem[]
   isGenerating: boolean
@@ -11,6 +18,15 @@ interface Props {
   onNewChat: () => void
   onSaveAnimation: (animationId: number, title: string, save: boolean) => void
   onOpenGrapher: (mode: '2d' | '3d') => void
+  voiceTutor?: VoiceTutor
+}
+
+const VOICE_STATUS_LABEL: Record<string, string> = {
+  connecting: 'connecting…',
+  listening: '🎙️ listening — ask me to teach you something',
+  thinking: 'thinking…',
+  teaching: 'teaching — talk any time to butt in',
+  error: 'voice error — check the mic / keys',
 }
 
 export function ChatPanel({
@@ -21,6 +37,7 @@ export function ChatPanel({
   onNewChat,
   onSaveAnimation,
   onOpenGrapher,
+  voiceTutor,
 }: Props) {
   const [value, setValue] = useState('')
   const historyRef = useRef<HTMLDivElement>(null)
@@ -42,10 +59,32 @@ export function ChatPanel({
     <div className="ex-chat">
       <div className="ex-chat-header">
         <span className="ex-chat-title">AI Assistant</span>
-        <button className="ex-chat-newchat" onClick={onNewChat} title="New chat">
-          ＋
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          {voiceTutor && (
+            <button
+              className={`ex-voice-toggle${voiceTutor.on ? ' ex-voice-on' : ''}`}
+              onClick={voiceTutor.toggle}
+              title={voiceTutor.on ? 'Turn off Voice Tutor Mode' : 'Turn on Voice Tutor Mode'}
+            >
+              {voiceTutor.on ? '🎙️ Voice tutor: on' : '🎙️ Voice tutor'}
+            </button>
+          )}
+          <button className="ex-chat-newchat" onClick={onNewChat} title="New chat">
+            ＋
+          </button>
+        </div>
       </div>
+
+      {voiceTutor?.on && (
+        <div className="ex-voice-strip">
+          <span className="ex-voice-status">
+            {VOICE_STATUS_LABEL[voiceTutor.status] ?? voiceTutor.status}
+          </span>
+          {voiceTutor.transcript && (
+            <span className="ex-voice-transcript">“{voiceTutor.transcript}”</span>
+          )}
+        </div>
+      )}
 
       <div className="ex-grapher-bar">
         <button className="ex-grapher-btn" onClick={() => onOpenGrapher('2d')}>
