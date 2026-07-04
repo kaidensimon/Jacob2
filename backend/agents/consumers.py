@@ -14,7 +14,9 @@ Protocol
 client → consumer (JSON):
   {"type":"voiceOn"} / {"type":"voiceOff"}     # start/stop the mic → STT
   {"type":"startLesson","topic":"..."}          # typed trigger (voice also triggers)
+  {"type":"utterance","text":"..."}             # typed input, routed like speech
   {"type":"audioEnded"}                          # browser finished playing a clip
+  {"type":"snapshot","image":"<dataURL|null>"}   # reply to getSnapshot
   {"type":"stop"}
 client → consumer (binary): PCM16 16kHz mono mic frames → Deepgram
 
@@ -27,6 +29,8 @@ consumer → client (JSON):
   {"type":"answer","text":"..."}                # spoken barge-in reply (caption)
   {"type":"audioStart","mime":...} …binary… {"type":"audioEnd"}
   {"type":"speak","text":"..."}                 # fallback TTS (no Rime key)
+  {"type":"getSnapshot"}                         # ask for a whiteboard PNG
+  {"type":"animate","prompt":"..."}              # forward to the chat/Manim agent
   {"type":"transcript","text":"...","final":bool}
   {"type":"paused"} {"type":"sectionDone"} {"type":"lessonDone"} {"type":"error",...}
 """
@@ -34,12 +38,14 @@ consumer → client (JSON):
 import asyncio
 import json
 import os
+import random
 from urllib.parse import parse_qs
 
 import httpx
 from channels.generic.websocket import AsyncWebsocketConsumer
 
-from .lesson_planner import lesson_outline, plan_section, answer_utterance, decide_voice_intent
+from .lesson_planner import (lesson_outline, plan_section, decide_voice_intent,
+                             elaborate_reply, summarize_elaboration, fix_section)
 
 RIME_URL = 'https://users.rime.ai/v1/rime-tts'
 RIME_SPEAKER = os.environ.get('RIME_SPEAKER', 'marlu')
@@ -54,9 +60,54 @@ DEEPGRAM_WS = (
 BEAT_TIMEOUT = 45
 MIN_BARGE_WORDS = 2  # ignore tiny/noise transcripts so playback echo can't false-trigger
 
+# Canned lines to cover the (rare) gap when a section ends before the next one
+# has finished planning. No LLM — picked at random, fed straight to Rime, and a
+# line that starts always FINISHES before the next section may begin.
+FILLER_LINES = [
+    "Righto, gimme a tick — just chalking up the next bit.",
+    "One sec mate, sketching out the next board.",
+    "Hang tight a mo', next part's nearly ready.",
+    "Bear with us a tick, lining up the next section.",
+    "Almost sorted mate, two shakes.",
+    "Just puttin' the finishing touches on the next bit, won't be a mo'.",
+]
+# Post-section cleanup lines — same rules: canned, cached, no LLM tokens.
+APOLOGY_LINES = [
+    "Ah hang on, that's come out a bit wonky — lemme tidy it up real quick, my bad.",
+    "Hmm, that drawing's gone a bit dodgy. Give us a tick to clean it up.",
+    "Sorry mate, that's messier than I wanted — quick tidy-up and we're sweet.",
+]
+DIGEST_LINES = [
+    "Righto, cleaned that up a bit. Take a minute to let it sink in — hit ready whenever you wanna crack on.",
+    "There we go, much tidier. Have a squiz for a bit, and smack that ready button when you're good to go.",
+    "All fixed up mate. Sit with it for a tick, and hit ready when it's clicked.",
+]
+DIGEST_SECONDS = 30
+_filler_audio: dict = {}  # text -> cached Rime mp3 chunks (survives across lessons)
+
 
 def _key(name):
     return os.environ.get(name, '')
+
+
+# One shared HTTP client so each beat doesn't pay a fresh TLS handshake to Rime.
+_rime_http = None
+
+
+def _rime_client() -> httpx.AsyncClient:
+    global _rime_http
+    if _rime_http is None:
+        _rime_http = httpx.AsyncClient(timeout=60)
+    return _rime_http
+
+
+def _tidy_shapes(shapes):
+    """Deterministic cleanup of LLM shape quirks: models sometimes emit the two
+    characters backslash-n inside labels, which renders literally on the board."""
+    for s in shapes:
+        if isinstance(s.get('text'), str) and '\\n' in s['text']:
+            s['text'] = s['text'].replace('\\n', '\n')
+    return shapes
 
 
 class LessonConsumer(AsyncWebsocketConsumer):
@@ -73,6 +124,13 @@ class LessonConsumer(AsyncWebsocketConsumer):
         self._in_lesson = False
         self._history = []               # spoken conversation, for context
         self._context_future = None      # pending selection fetch from the client
+        self._snapshot_future = None     # pending whiteboard PNG from the client
+        self._issues_future = None       # pending detectIssues run from the client
+        self._move_on = asyncio.Event()  # "ready to move on" button pressed
+        self._elaborating = False        # ellaborating_status: sidebar mode flag
+        self._elab_queue = asyncio.Queue()  # learner's turns during a sidebar
+        self._side_drawn = 0             # sidebar drawings placed so far
+        self._current_section = None
         self._dg = None
         self._dg_task = None
         await self.accept()
@@ -119,6 +177,19 @@ class LessonConsumer(AsyncWebsocketConsumer):
         elif t == 'context':
             if self._context_future and not self._context_future.done():
                 self._context_future.set_result(msg.get('selection') or {})
+        elif t == 'snapshot':
+            if self._snapshot_future and not self._snapshot_future.done():
+                self._snapshot_future.set_result(msg.get('image'))
+        elif t == 'issues':
+            if self._issues_future and not self._issues_future.done():
+                self._issues_future.set_result(msg.get('issues') or [])
+        elif t == 'moveOn':
+            self._move_on.set()
+        elif t == 'utterance':
+            # Typed input, routed exactly like a final voice transcript.
+            txt = (msg.get('text') or '').strip()
+            if txt:
+                await self._handle_speech(txt, True)
         elif t == 'audioEnded':
             self._ack.set()
         elif t == 'stop':
@@ -154,14 +225,21 @@ class LessonConsumer(AsyncWebsocketConsumer):
         if action in ('teach', 'solve') and topic:
             self._history.append({'role': 'assistant', 'text': f'(teaching: {topic})'})
             self._begin_lesson(topic)
+        elif action == 'animate' and topic:
+            # Forward to the chat orchestrator's Manim pipeline via the client.
+            self._history.append({'role': 'assistant', 'text': f'(animating: {topic})'})
+            say = say or "Righto mate, cooking up an animation for ya — takes a few ticks, hang tight."
+            await self.send_json({'type': 'answer', 'text': say})
+            await self.send_json({'type': 'animate', 'prompt': topic})
+            await self._speak_and_wait(say)
         elif say:
             self._history.append({'role': 'assistant', 'text': say})
             await self.send_json({'type': 'answer', 'text': say})
             await self._speak_and_wait(say)
 
-    async def _speak_and_wait(self, text):
+    async def _speak_and_wait(self, text, prefetched=None):
         self._ack.clear()
-        await self._speak(text)
+        await self._speak(text, prefetched=prefetched)
         ack = asyncio.create_task(self._ack.wait())
         _, pending = await asyncio.wait({ack}, timeout=BEAT_TIMEOUT)
         for p in pending:
@@ -186,12 +264,25 @@ class LessonConsumer(AsyncWebsocketConsumer):
             sections = outline.get('sections', [])
             await self.send_json({'type': 'lessonStarted', 'title': outline.get('title', topic),
                                   'sections': [s.get('title') for s in sections]})
+            # Pipeline: section i+1 is planned (and its first beat's TTS fetched)
+            # WHILE section i is being narrated, so there's no dead air between
+            # sections. Priors for i+1 are sections[:i+1] — known in advance.
+            self._warm_fillers()
+            next_plan = self._plan_ahead(topic, sections[0], [], key) if sections else None
             for i, section in enumerate(sections):
-                plan = await asyncio.to_thread(plan_section, topic, section, self._prior, key)
+                plan, first_audio = await self._await_plan(next_plan)
+                next_plan = (self._plan_ahead(topic, sections[i + 1], sections[:i + 1], key)
+                             if i + 1 < len(sections) else None)
                 if not plan.get('shapes'):
                     continue
-                await self._conduct(plan, {'x': 0, 'y': i * 760})
+                self._current_section = section
+                origin = {'x': 0, 'y': i * 760}
+                await self._conduct(plan, origin, first_audio)
+                # Light visual correction pass — blocks the next section until
+                # any oopsies are fixed and the learner's had time to digest.
+                await self._review_section(plan, origin)
                 self._prior.append(section)
+            self._current_section = None
             await self.send_json({'type': 'lessonDone'})
         except asyncio.CancelledError:
             raise
@@ -200,11 +291,117 @@ class LessonConsumer(AsyncWebsocketConsumer):
         finally:
             self._in_lesson = False
 
-    async def _conduct(self, section, origin):
+    async def _await_plan(self, plan_task):
+        """Await the backgrounded next-section plan. If it isn't ready when the
+        previous section ends, cover the silence with canned filler lines. A
+        filler that starts always FINISHES — the plan-ready check only happens
+        BETWEEN lines, never mid-clip."""
+        done, _ = await asyncio.wait({plan_task}, timeout=2.0)  # sub-2s gap: stay quiet
+        order = random.sample(FILLER_LINES, len(FILLER_LINES))
+        n = 0
+        while not done:
+            await self._speak_canned(order[n % len(order)])
+            n += 1
+            done, _ = await asyncio.wait({plan_task}, timeout=6.0)  # a beat of natural silence
+        return await plan_task
+
+    # ── post-section visual correction (apology → fix → digest timer) ────────────
+    async def _review_section(self, plan, origin):
+        """Ask the browser's detector whether this section's board has readability
+        issues. If so: canned apology → LLM fix pass (the agent decides where
+        things move) → board replaced → canned digest line → 30s timer the
+        learner can skip with the 'ready to move on' button."""
+        shapes = plan.get('shapes') or []
+        ids = [s.get('id') for s in shapes if s.get('id')]
+        if not ids:
+            return
+        issues = await self._resolve_issues(ids)
+        if not issues:
+            return
+        await self._speak_canned(random.choice(APOLOGY_LINES))
+        try:
+            fixed = await asyncio.to_thread(fix_section, shapes, issues, _key('OPENAI_API_KEY'))
+            new_shapes = _tidy_shapes(fixed.get('shapes') or [])
+        except Exception as e:
+            await self.send_json({'type': 'error', 'message': f'cleanup failed: {e}'})
+            new_shapes = []
+        if not new_shapes:
+            return  # fix pass failed — don't fake a cleanup, just move on
+        await self.send_json({'type': 'replaceShapes', 'shapes': new_shapes, 'origin': origin})
+        await self._speak_canned(random.choice(DIGEST_LINES))
+        self._move_on.clear()
+        await self.send_json({'type': 'digest', 'seconds': DIGEST_SECONDS})
+        ready = asyncio.create_task(self._move_on.wait())
+        _, pending = await asyncio.wait({ready}, timeout=DIGEST_SECONDS)
+        for p in pending:
+            p.cancel()
+        await self.send_json({'type': 'digestDone'})
+
+    async def _resolve_issues(self, ids):
+        """Have the browser run the real detectIssues pass on this section."""
+        loop = asyncio.get_event_loop()
+        self._issues_future = loop.create_future()
+        await self.send_json({'type': 'getIssues', 'ids': ids})
+        try:
+            return await asyncio.wait_for(self._issues_future, timeout=5)
+        except asyncio.TimeoutError:
+            return []
+        finally:
+            self._issues_future = None
+
+    def _warm_fillers(self):
+        """Pre-fetch every canned line's TTS into the module cache so fillers,
+        apologies and digest lines start instantly when needed."""
+        if not _key('RIME_API_KEY'):
+            return
+        async def warm():
+            for text in FILLER_LINES + APOLOGY_LINES + DIGEST_LINES:
+                if text not in _filler_audio:
+                    _filler_audio[text] = await self._fetch_tts(text)
+        task = asyncio.create_task(warm())
+        task.add_done_callback(lambda t: t.cancelled() or t.exception())
+
+    async def _speak_canned(self, text):
+        """Speak one canned line in full, from the cache when it's warm."""
+        chunks = _filler_audio.get(text)
+        if chunks is None and _key('RIME_API_KEY'):
+            try:
+                chunks = _filler_audio[text] = await self._fetch_tts(text)
+            except Exception:
+                chunks = None
+        pre = None
+        if chunks is not None:
+            pre = asyncio.get_event_loop().create_future()
+            pre.set_result(chunks)
+        await self.send_json({'type': 'answer', 'text': text})
+        await self._speak_and_wait(text, prefetched=pre)
+
+    def _plan_ahead(self, topic, section, priors, key):
+        """Plan a section in the background and pre-fetch its first beat's TTS,
+        so the section can start speaking the moment the previous one ends."""
+        async def go():
+            plan = await asyncio.to_thread(plan_section, topic, section, priors, key)
+            _tidy_shapes(plan.get('shapes') or [])
+            beats = plan.get('beats') or []
+            audio = self._prefetch(beats[0].get('say', '')) if beats else None
+            return plan, audio
+        task = asyncio.create_task(go())
+        # Retrieve failures quietly; awaiting the task re-raises them in the loop.
+        task.add_done_callback(lambda t: t.cancelled() or t.exception())
+        return task
+
+    async def _conduct(self, section, origin, first_audio=None):
         await self.send_json({'type': 'loadShapes', 'shapes': section.get('shapes', []), 'origin': origin})
-        for i, beat in enumerate(section.get('beats', [])):
+        beats = section.get('beats', [])
+        # Pipeline the TTS: beat i+1's audio is fetched from Rime while beat i is
+        # still playing, so every beat after the first starts the moment its
+        # caption appears (and beat 0's audio was already fetched by _plan_ahead).
+        next_audio = first_audio or (self._prefetch(beats[0].get('say', '')) if beats else None)
+        for i, beat in enumerate(beats):
             await self._drain_questions()  # answer anything asked before this beat
             say = beat.get('say', '')
+            audio = next_audio
+            next_audio = self._prefetch(beats[i + 1].get('say', '')) if i + 1 < len(beats) else None
             await self.send_json({'type': 'beat', 'index': i, 'say': say})
             if beat.get('reveal'):
                 await self.send_json({'type': 'reveal', 'ids': beat['reveal'], 'camera': True})
@@ -212,12 +409,20 @@ class LessonConsumer(AsyncWebsocketConsumer):
                 await self.send_json({'type': 'emphasize', 'ids': beat['emphasize']})
             self._ack.clear()
             self._interrupt.clear()
-            await self._speak(say)
+            await self._speak(say, prefetched=audio)
             await self._wait_ack_or_interrupt()
             if self._interrupt.is_set():
                 await self.send_json({'type': 'stopAudio'})
-                await self._drain_questions()
                 self._interrupt.clear()
+                # The interim transcript already cut the audio; wait briefly for
+                # the FINAL transcript of what they actually said.
+                try:
+                    q = await asyncio.wait_for(self._questions.get(), timeout=6)
+                except asyncio.TimeoutError:
+                    q = None  # noise / false trigger — just carry on
+                if q is not None:
+                    await self._elaborate(q)
+                await self._drain_questions()
         await self.send_json({'type': 'sectionDone'})
 
     async def _wait_ack_or_interrupt(self):
@@ -230,23 +435,115 @@ class LessonConsumer(AsyncWebsocketConsumer):
 
     async def _drain_questions(self):
         while not self._questions.empty():
-            q = self._questions.get_nowait()
-            await self.send_json({'type': 'thinking'})
-            try:
-                ans = await asyncio.to_thread(answer_utterance, self._topic, q, self._prior, _key('OPENAI_API_KEY'))
-                say = ans.get('say', '')
-            except Exception as e:
-                say = f"Ah bugger, my brain glitched: {e}"
-            await self.send_json({'type': 'answer', 'text': say})
-            self._ack.clear()
-            await self._speak(say)
-            ack = asyncio.create_task(self._ack.wait())
-            _, pending = await asyncio.wait({ack}, timeout=BEAT_TIMEOUT)
-            for p in pending:
-                p.cancel()
+            await self._elaborate(self._questions.get_nowait())
+
+    # ── sidebar elaboration (fresh agent, verbal-first, state-gated) ─────────────
+    async def _elaborate(self, confusion):
+        """Mid-lesson sidebar. `_elaborating` (the ellaborating_status flag) stays
+        True until the learner says they've got it, so the agent can't veer back
+        into the lesson mid-explanation. Each turn uses a FRESH LLM context —
+        whiteboard snapshot + lesson summary + the sidebar convo — never the
+        lesson's whole chat history. Verbal-only unless the learner explicitly
+        asks to visualize. Afterwards only a one-line summary goes to history."""
+        self._elaborating = True
+        await self.send_json({'type': 'thinking'})
+        board = await self._resolve_snapshot()
+        summary = self._lesson_summary()
+        convo = [{'role': 'user', 'text': confusion}]
+        real_sidebar = False  # did any actual explaining happen?
+        try:
+            while True:
+                reply = None
+                try:
+                    reply = await asyncio.to_thread(
+                        elaborate_reply, summary, board, convo, _key('OPENAI_API_KEY'))
+                except Exception as e:
+                    reply = {'say': f"Ah bugger, my brain glitched: {e}", 'satisfied': True}
+                say = (reply.get('say') or '').strip()
+                convo.append({'role': 'assistant', 'text': say})
+                shapes = reply.get('shapes') or []
+                if shapes:
+                    # Sidebar drawings get their own column, right of the lesson.
+                    origin = {'x': 1150, 'y': self._side_drawn * 700}
+                    self._side_drawn += 1
+                    await self.send_json({'type': 'loadShapes', 'shapes': shapes, 'origin': origin})
+                    ids = [s.get('id') for s in shapes if s.get('id')]
+                    await self.send_json({'type': 'reveal', 'ids': ids, 'camera': True})
+                if say:
+                    await self.send_json({'type': 'answer', 'text': say})
+                    await self._speak_and_wait(say)
+                if reply.get('offtopic'):
+                    break  # not a real question — quip's been fired, back to it
+                real_sidebar = True
+                if reply.get('satisfied'):
+                    break
+                try:
+                    nxt = await asyncio.wait_for(self._elab_queue.get(), timeout=90)
+                except asyncio.TimeoutError:
+                    break  # they've gone quiet — assume sorted, back to the lesson
+                convo.append({'role': 'user', 'text': nxt})
+        finally:
+            self._elaborating = False
+        if not real_sidebar:
+            return  # pure banter — nothing worth remembering
+        # Save ONE summary line instead of the whole sidebar transcript.
+        note = ''
+        try:
+            res = await asyncio.to_thread(summarize_elaboration, convo, _key('OPENAI_API_KEY'))
+            note = (res.get('summary') or '').strip()
+        except Exception:
+            pass
+        self._history.append({'role': 'assistant',
+                              'text': f"(mid-lesson sidebar: {note or 'cleared up: ' + confusion})"})
+
+    async def _resolve_snapshot(self):
+        """Ask the browser for a PNG (dataURL) of the whole whiteboard."""
+        loop = asyncio.get_event_loop()
+        self._snapshot_future = loop.create_future()
+        await self.send_json({'type': 'getSnapshot'})
+        try:
+            return await asyncio.wait_for(self._snapshot_future, timeout=6)
+        except asyncio.TimeoutError:
+            return None
+        finally:
+            self._snapshot_future = None
+
+    def _lesson_summary(self):
+        parts = [f'Lesson topic: {self._topic}']
+        for s in self._prior:
+            parts.append(f"Covered already: {s.get('title')} — {s.get('goal', '')}")
+        if self._current_section:
+            parts.append(f"Currently teaching: {self._current_section.get('title')} — "
+                         f"{self._current_section.get('goal', '')}")
+        return '\n'.join(parts)
 
     # ── Rime TTS (marlu / arcana) ────────────────────────────────────────────────
-    async def _speak(self, text):
+    def _rime_stream(self, text):
+        headers = {'Authorization': f"Bearer {_key('RIME_API_KEY')}", 'Accept': 'audio/mp3',
+                   'Content-Type': 'application/json'}
+        body = {'speaker': RIME_SPEAKER, 'text': text, 'modelId': RIME_MODEL, 'samplingRate': 24000}
+        return _rime_client().stream('POST', RIME_URL, headers=headers, json=body)
+
+    def _prefetch(self, text):
+        """Start fetching a beat's TTS ahead of time. Returns a task (or None)."""
+        if not text.strip() or not _key('RIME_API_KEY'):
+            return None
+        task = asyncio.create_task(self._fetch_tts(text))
+        # Retrieve any failure so an unused prefetch doesn't warn; _speak re-raises
+        # it when the task is actually awaited.
+        task.add_done_callback(lambda t: t.cancelled() or t.exception())
+        return task
+
+    async def _fetch_tts(self, text):
+        chunks = []
+        async with self._rime_stream(text) as resp:
+            resp.raise_for_status()
+            async for chunk in resp.aiter_bytes():
+                if chunk:
+                    chunks.append(chunk)
+        return chunks
+
+    async def _speak(self, text, prefetched=None):
         key = _key('RIME_API_KEY')
         if not text.strip():
             self._ack.set()
@@ -256,10 +553,11 @@ class LessonConsumer(AsyncWebsocketConsumer):
             return
         try:
             await self.send_json({'type': 'audioStart', 'mime': 'audio/mpeg'})
-            headers = {'Authorization': f'Bearer {key}', 'Accept': 'audio/mp3', 'Content-Type': 'application/json'}
-            body = {'speaker': RIME_SPEAKER, 'text': text, 'modelId': RIME_MODEL, 'samplingRate': 24000}
-            async with httpx.AsyncClient(timeout=60) as client:
-                async with client.stream('POST', RIME_URL, headers=headers, json=body) as resp:
+            if prefetched is not None:
+                for chunk in await prefetched:
+                    await self.send(bytes_data=chunk)
+            else:
+                async with self._rime_stream(text) as resp:
                     resp.raise_for_status()
                     async for chunk in resp.aiter_bytes():
                         if chunk:
@@ -308,19 +606,35 @@ class LessonConsumer(AsyncWebsocketConsumer):
                     continue
                 is_final = bool(data.get('is_final'))
                 await self.send_json({'type': 'transcript', 'text': transcript, 'final': is_final})
-                if not is_final or len(transcript.split()) < MIN_BARGE_WORDS:
-                    continue
-                if self._in_lesson:
-                    # Barge-in: queue the question and interrupt the current beat.
-                    self._questions.put_nowait(transcript)
-                    self._interrupt.set()
-                    await self.send_json({'type': 'paused'})
-                else:
-                    # Idle: route like the orchestrator — look at the selection,
-                    # then teach / solve / ask-to-clarify / chat.
-                    asyncio.create_task(self._route_utterance(transcript))
+                await self._handle_speech(transcript, is_final)
         except Exception:
             pass
+
+    async def _handle_speech(self, transcript, is_final):
+        """Route speech (interim + final) — also used for typed 'utterance's.
+        Interim results cut Jacob off the moment the learner starts talking;
+        the final transcript then carries what they actually said."""
+        words = len(transcript.split())
+        if self._elaborating:
+            # Sidebar: barge-in stops Jacob talking; finals feed the sidebar loop
+            # (even one word — "yep" ends it).
+            if words >= MIN_BARGE_WORDS:
+                await self.send_json({'type': 'stopAudio'})
+                self._ack.set()  # unblock the sidebar's _speak_and_wait
+            if is_final:
+                self._elab_queue.put_nowait(transcript)
+        elif self._in_lesson:
+            if words < MIN_BARGE_WORDS:
+                return
+            if not self._interrupt.is_set():
+                self._interrupt.set()  # _conduct stops the audio immediately
+                await self.send_json({'type': 'paused'})
+            if is_final:
+                self._questions.put_nowait(transcript)
+        elif is_final and words >= MIN_BARGE_WORDS:
+            # Idle: route like the orchestrator — look at the selection, then
+            # teach / solve / animate / ask-to-clarify / chat.
+            asyncio.create_task(self._route_utterance(transcript))
 
     async def _close_dg(self):
         if self._dg_task:

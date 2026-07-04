@@ -1,39 +1,41 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 @import url('tldraw/tldraw.css');
 
-/* ===================== Liquid Glass design tokens ===================== */
+/* ===================== Design tokens — clean & minimal ===================== */
+/* One accent color, neutral grays, flat white surfaces. The old liquid-glass
+   token names are kept so component styles keep working. */
 :root {
-  /* Accents */
-  --lg-accent: #6c47ff;
-  --lg-accent-strong: #5534e0;
-  --lg-accent-2: #9333ea;
-  --lg-accent-3: #22d3ee;
-  --lg-gradient: linear-gradient(135deg, #6c47ff 0%, #8b5cf6 45%, #4f46e5 100%);
-  --lg-gradient-soft: linear-gradient(135deg, #7c5cff 0%, #a855f7 100%);
+  /* Accent */
+  --lg-accent: #4f46e5;
+  --lg-accent-strong: #4338ca;
+  --lg-accent-2: #4f46e5;
+  --lg-accent-3: #4f46e5;
+  --lg-gradient: linear-gradient(#4f46e5, #4f46e5); /* flat — kept for compat */
+  --lg-gradient-soft: linear-gradient(#4f46e5, #4f46e5);
 
   /* Ink / text */
-  --lg-ink: #171334;
-  --lg-ink-soft: #56517a;
-  --lg-ink-faint: #8f8ab0;
+  --lg-ink: #18181b;
+  --lg-ink-soft: #52525b;
+  --lg-ink-faint: #a1a1aa;
 
-  /* Glass surfaces */
-  --lg-glass: rgba(255, 255, 255, 0.55);
-  --lg-glass-strong: rgba(255, 255, 255, 0.72);
-  --lg-glass-thin: rgba(255, 255, 255, 0.4);
-  --lg-glass-border: rgba(255, 255, 255, 0.65);
-  --lg-hairline: rgba(120, 110, 190, 0.14);
+  /* Surfaces */
+  --lg-glass: #ffffff;
+  --lg-glass-strong: #ffffff;
+  --lg-glass-thin: #ffffff;
+  --lg-glass-border: #e4e4e7;
+  --lg-hairline: #ececef;
 
-  /* Depth */
-  --lg-shadow: 0 10px 34px -8px rgba(46, 30, 108, 0.22), 0 2px 8px rgba(46, 30, 108, 0.08);
-  --lg-shadow-lg: 0 24px 60px -12px rgba(46, 30, 108, 0.34);
-  --lg-shadow-accent: 0 12px 30px -6px rgba(108, 71, 255, 0.45);
-  --lg-inner-hi: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  /* Depth — subtle, single-layer */
+  --lg-shadow: 0 1px 3px rgba(0, 0, 0, 0.07);
+  --lg-shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.09);
+  --lg-shadow-accent: 0 1px 3px rgba(0, 0, 0, 0.12);
+  --lg-inner-hi: inset 0 0 0 0 transparent;
 
-  --lg-radius: 22px;
-  --lg-radius-sm: 14px;
-  --lg-blur: saturate(180%) blur(22px);
-  --lg-blur-strong: saturate(200%) blur(30px);
-  --lg-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --lg-radius: 12px;
+  --lg-radius-sm: 8px;
+  --lg-blur: none;
+  --lg-blur-strong: none;
+  --lg-ease: ease-out;
 }
 
 *, *::before, *::after {
@@ -45,46 +47,13 @@ body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
   color: var(--lg-ink);
-  background: #eef0fb;
+  background: #fafafa;
   overscroll-behavior: none;
 }
 
-/* Drifting aurora field used behind glass surfaces */
+/* Formerly an animated aurora backdrop — now just a plain quiet background. */
 .lg-aurora {
-  position: relative;
-  isolation: isolate;
-  background:
-    radial-gradient(120% 120% at 100% 0%, #eef1ff 0%, #f6f4ff 40%, #eceafc 100%);
-  overflow: hidden;
-}
-.lg-aurora::before,
-.lg-aurora::after {
-  content: '';
-  position: absolute;
-  inset: -30%;
-  z-index: -1;
-  pointer-events: none;
-  background:
-    radial-gradient(38% 44% at 18% 22%, rgba(124, 92, 255, 0.55), transparent 60%),
-    radial-gradient(34% 40% at 82% 18%, rgba(34, 211, 238, 0.45), transparent 62%),
-    radial-gradient(46% 50% at 72% 88%, rgba(168, 85, 247, 0.5), transparent 60%),
-    radial-gradient(40% 44% at 26% 82%, rgba(99, 102, 241, 0.42), transparent 62%);
-  filter: blur(30px);
-  animation: lg-drift 26s var(--lg-ease) infinite alternate;
-}
-.lg-aurora::after {
-  opacity: 0.55;
-  animation-duration: 34s;
-  animation-direction: alternate-reverse;
-}
-@keyframes lg-drift {
-  0%   { transform: translate3d(0, 0, 0) scale(1) rotate(0deg); }
-  50%  { transform: translate3d(3%, -2%, 0) scale(1.08) rotate(6deg); }
-  100% { transform: translate3d(-3%, 3%, 0) scale(1.04) rotate(-5deg); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .lg-aurora::before,
-  .lg-aurora::after { animation: none; }
+  background: #fafafa;
 }
 
 #root {
@@ -95,14 +64,55 @@ body {
 .spinner {
   width: 36px;
   height: 36px;
-  border: 3px solid #e0e0ea;
-  border-top-color: #6c47ff;
+  border: 3px solid #e4e4e7;
+  border-top-color: var(--lg-accent);
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
 }
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+/* ===================== Jacob sprite (drawing companion) ===================== */
+
+.jacob-sprite {
+  position: absolute;
+  animation: jacob-walk-in 0.9s ease-out both;
+  will-change: transform;
+}
+.jacob-sprite-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  transform-origin: 50% 92%;
+  animation: jacob-scribble 0.5s ease-in-out infinite alternate;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.22));
+}
+/* Waddle in from the right, little hop on each "step" */
+@keyframes jacob-walk-in {
+  0%   { transform: translateX(150px) translateY(0);   opacity: 0; }
+  20%  { transform: translateX(112px) translateY(-8px); opacity: 1; }
+  40%  { transform: translateX(75px)  translateY(0); }
+  60%  { transform: translateX(38px)  translateY(-8px); }
+  80%  { transform: translateX(10px)  translateY(0); }
+  100% { transform: translateX(0)     translateY(0); }
+}
+/* Busy pencil wiggle while the agent draws */
+@keyframes jacob-scribble {
+  from { transform: rotate(-2.5deg) translateY(0); }
+  to   { transform: rotate(3deg)    translateY(-2px); }
+}
+.jacob-sprite-leave {
+  animation: jacob-walk-out 0.5s ease-in both;
+}
+@keyframes jacob-walk-out {
+  0%   { transform: translateX(0) translateY(0);       opacity: 1; }
+  50%  { transform: translateX(60px) translateY(-6px); opacity: 1; }
+  100% { transform: translateX(130px) translateY(0);   opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .jacob-sprite, .jacob-sprite-img, .jacob-sprite-leave { animation: none; }
 }
 
 /* ===================== Excalidraw + AI Assistant Layout ===================== */
@@ -134,49 +144,18 @@ body {
   }
 }
 
-/* ===================== Liquid Glass — Excalidraw chrome ===================== */
+/* ===================== Excalidraw chrome — light touch ===================== */
 /* Scoped to light theme so the built-in dark-mode toggle keeps its own look. */
 .ex-canvas .excalidraw:not(.theme--dark) {
-  --island-bg-color: rgba(255, 255, 255, 0.6);
-  --popup-bg-color: rgba(255, 255, 255, 0.72);
-  --popup-secondary-bg-color: rgba(255, 255, 255, 0.55);
-  --sidebar-bg-color: rgba(255, 255, 255, 0.68);
-  --input-bg-color: rgba(255, 255, 255, 0.6);
-  --color-surface-low: rgba(236, 236, 244, 0.55);
-  --color-surface-mid: rgba(242, 242, 247, 0.6);
-  --color-surface-high: rgba(241, 240, 255, 0.7);
-  --button-hover-bg: rgba(108, 71, 255, 0.1);
-  --button-selected-bg: rgba(108, 71, 255, 0.16);
-  --button-selected-hover-bg: rgba(108, 71, 255, 0.22);
+  --button-hover-bg: rgba(79, 70, 229, 0.08);
+  --button-selected-bg: rgba(79, 70, 229, 0.12);
+  --button-selected-hover-bg: rgba(79, 70, 229, 0.18);
 }
 
-/* Frosted floating islands: toolbar, properties panel, zoom & undo controls… */
 .ex-canvas .excalidraw:not(.theme--dark) .Island {
-  -webkit-backdrop-filter: var(--lg-blur);
-  backdrop-filter: var(--lg-blur);
   border: 1px solid var(--lg-glass-border);
-  box-shadow: var(--lg-shadow), var(--lg-inner-hi);
-  border-radius: 16px;
-}
-
-/* Popovers / dropdown menus get a stronger frost so text stays crisp */
-.ex-canvas .excalidraw:not(.theme--dark) .dropdown-menu-container.Island,
-.ex-canvas .excalidraw:not(.theme--dark) .dropdown-menu .Island {
-  -webkit-backdrop-filter: var(--lg-blur-strong);
-  backdrop-filter: var(--lg-blur-strong);
-}
-
-/* Highlight the active tool with the brand gradient */
-.ex-canvas .excalidraw:not(.theme--dark) .ToolIcon__icon[aria-label] {
-  border-radius: 12px;
-}
-.ex-canvas .excalidraw:not(.theme--dark) .ToolIcon--selected .ToolIcon__icon {
-  background: var(--lg-gradient) !important;
-  color: #fff;
-  box-shadow: var(--lg-shadow-accent);
-}
-.ex-canvas .excalidraw:not(.theme--dark) .ToolIcon--selected .ToolIcon__icon svg {
-  color: #fff;
+  box-shadow: var(--lg-shadow);
+  border-radius: 10px;
 }
 
 

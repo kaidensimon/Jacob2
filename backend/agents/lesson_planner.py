@@ -98,7 +98,7 @@ Lay this section's diagram out in a clean region roughly (0,0) to (960,640). x �
 - id (string, REQUIRED, unique within the section) — beats and arrows refer to shapes by id.
 - type: "rectangle" | "ellipse" | "diamond" (containers, may hold a `text` label) | "text" (standalone label) | "arrow" (connector) | "line" | "math" (a LaTeX formula — put LaTeX in `latex`; THIS is how you write ANY equation/fraction/integral/symbol, never plain text).
 - x, y, width, height (numbers). For "math" omit width/height (it auto-sizes).
-- text (string, optional): a container's label, or the words of a "text" shape.
+- text (string, optional): a container's label, or the words of a "text" shape. Multi-line text uses REAL newlines in the JSON string — NEVER the two characters backslash-n.
 - latex (string, optional): for "math", the LaTeX body (no $…$). JSON needs doubled backslashes ("\\frac").
 - For arrows connect two shapes with fromId and toId (create both shapes first). A connector's label goes in the arrow's OWN `text` — never a floating text label. Don't repeat the same label on parallel arrows.
 - strokeColor / backgroundColor (hex, optional): use color with restraint and meaning.
@@ -156,17 +156,95 @@ def answer_utterance(topic: str, question: str, prior_sections: list, api_key: s
     return _complete(ANSWER_SYSTEM, user, api_key, model, max_tokens=600)
 
 
+# ─── Post-section visual cleanup (light correction pipeline) ─────────────────
+
+FIX_SYSTEM = r"""You clean up ONE section of a whiteboard lesson diagram that has readability problems. You get the section's shapes (the same format they were planned in) and a list of DETECTED issues (overlaps, text overflowing its box, cramped spacing, things poking outside the region).
+
+Return the FULL corrected shape list. You decide where things move — spread shapes out, widen boxes that clip their text, nudge labels clear of other shapes. Rules:
+- Keep every shape's id, type and meaning. Don't delete or add shapes; don't rewrite the content (only reposition/resize; tweak fontSize only if that's what's broken).
+- Keep the layout inside roughly (0,0) to (960,640) with generous whitespace (~40-60px between things). x right, y down, x/y is each shape's top-left.
+- Arrows with fromId/toId follow their shapes automatically — return them unchanged.
+- Multi-line text uses REAL newlines in the JSON string, never the two characters backslash-n.
+Respond ONLY with JSON: {"shapes": [ <the full corrected list> ]}"""
+
+
+def fix_section(shapes: list, issues: list, api_key: str, model: str = None) -> dict:
+    """One-shot cleanup call: detected issues in, corrected shape list out."""
+    model = model or get_model_name({})
+    user = (
+        "Section shapes:\n" + json.dumps(shapes) +
+        "\n\nDetected issues:\n" + '\n'.join(f'- {i}' for i in issues) +
+        "\n\nReturn the corrected full shape list."
+    )
+    return _complete(FIX_SYSTEM, user, api_key, model, max_tokens=6000)
+
+
+# ─── Mid-lesson sidebar (fresh-context elaboration agent) ─────────────────────
+# When the learner barges in confused, the consumer spawns a FRESH agent context
+# — whiteboard snapshot + lesson summary + the confusion — instead of dragging
+# the whole lesson history along. Verbal-first; drawing is opt-in only.
+
+ELABORATE_SYSTEM = r"""You are Jacob, a chill Aussie whiteboard tutor, mid-lesson in a SIDEBAR: the learner interrupted because something didn't click. You get a snapshot of the whiteboard, a summary of the lesson so far, and the sidebar conversation. Respond ONLY with JSON:
+{"say": "<spoken reply>", "satisfied": true|false, "offtopic": true|false, "shapes": [ <shape>, ... ]}
+
+Rules:
+- "offtopic" is true when the learner's LAST message is NOT actually about the lesson or a real confusion — banter, jokes, trash talk, random remarks. Then "say" is ONE short in-character quip firing back ("Ha, good one mate — righto, back to it.") and you do NOT explain anything; the lesson resumes straight away. Otherwise false.
+- Explain VERBALLY: 2-4 spoken sentences, from a DIFFERENT angle than the board already shows (new analogy, concrete example, smaller steps). Do NOT draw by default — OMIT "shapes" entirely.
+- Include "shapes" ONLY when the learner's LAST message EXPLICITLY asks you to visualize / draw / show it (e.g. "I still don't understand, could you visualize what you're trying to say?"). Never volunteer a drawing.
+- "satisfied" is true ONLY when the learner's LAST message clearly says they get it now ("oh that makes sense", "got it", "yep I understand"). Then "say" is a short handover back to the lesson ("Sweet as — let's crack back on."). A follow-up question or lingering doubt is ALWAYS false.
+- Stay on the confusion. Do NOT continue the lesson — the lesson resumes separately once they're sorted.
+
+Shapes (only if explicitly asked): same engine as the lesson. Lay out in a clean region (0,0) to (960,640), x right / y down, each shape's x,y is its top-left. Each: {"id": "<unique string>", "type": "rectangle|ellipse|diamond|text|arrow|line|math", "x", "y", "width", "height", "text" (container label / text words), "latex" (for "math" only, no $, doubled backslashes), "fromId"/"toId" (arrows connect shapes; label in the arrow's own "text"), "strokeColor"/"backgroundColor" (hex, restrained), "fontSize" (16/20/28/36)}. Clean layout, no overlaps.""" + PERSONA
+
+
+def elaborate_reply(lesson_summary: str, board_image, convo: list, api_key: str, model: str = None) -> dict:
+    """One turn of the sidebar agent. The context is rebuilt FRESH every call:
+    snapshot + summary + the short sidebar convo — never the lesson chat log."""
+    model = model or get_model_name({})
+    intro = f"{lesson_summary}\n\nRespond to the learner's LAST message in the sidebar conversation that follows."
+    if board_image:
+        intro = (f"{lesson_summary}\n\nA snapshot of the whiteboard as it stands is attached.\n"
+                 f"Respond to the learner's LAST message in the sidebar conversation that follows.")
+    content = [{'type': 'text', 'text': intro}]
+    if board_image:
+        content.append({'type': 'image_url', 'image_url': {'url': board_image}})
+    messages = [{'role': 'system', 'content': ELABORATE_SYSTEM},
+                {'role': 'user', 'content': content}]
+    for h in convo:
+        messages.append({'role': 'assistant' if h.get('role') == 'assistant' else 'user',
+                         'content': h.get('text', '')})
+    return _complete_messages(messages, api_key, model, max_tokens=4000)
+
+
+SUMMARIZE_SYSTEM = (
+    "A tutor paused a lesson for a sidebar with a confused learner. Compress the whole "
+    "sidebar into ONE sentence for the tutor's memory: what the learner was confused about "
+    "and how it got cleared up. Respond ONLY with JSON: {\"summary\": \"<one sentence>\"}"
+)
+
+
+def summarize_elaboration(convo: list, api_key: str, model: str = None) -> dict:
+    """One-line summary of a sidebar, saved to history INSTEAD of the transcript."""
+    model = model or get_model_name({})
+    text = '\n'.join(f"{h.get('role')}: {h.get('text')}" for h in convo)
+    return _complete(SUMMARIZE_SYSTEM, text, api_key, model, max_tokens=300)
+
+
 # ─── Voice intent router (orchestrator-style, selection-aware) ────────────────
 
 INTENT_SYSTEM = (
     "You are the router for Jacob, a chill Aussie voice whiteboard tutor. The user "
     "just SPOKE to you. Work out what they actually want and reply ONLY with JSON:\n"
-    '{"action":"teach|solve|ask|chat","topic":"<subject to teach or solve>","say":"<spoken reply, for ask/chat only>"}\n\n'
+    '{"action":"teach|solve|animate|ask|chat","topic":"<subject to teach/solve/animate>","say":"<spoken reply, for animate/ask/chat only>"}\n\n'
     "- teach: they want a concept/topic explained that you CAN identify — from their "
     "words, or from what they've SELECTED on the canvas. Put the subject in \"topic\".\n"
     "- solve: they want a specific problem worked through that is SELECTED on the canvas "
     "or clearly stated in their words. Read it (including from a selected image) and put "
     '"solve this problem: <the actual problem>" in "topic".\n'
+    "- animate: they want a rendered VIDEO ANIMATION of something (\"show me this as a "
+    "visual animation\", \"animate that for me\"). Put WHAT to animate in \"topic\" (read "
+    "the selection/image if they said \"this\"), plus a short in-character heads-up in "
+    '"say" ("Righto, cooking up an animation for ya — takes a few ticks, hang tight.").\n'
     "- ask: you genuinely CANNOT tell what they want taught or solved — nothing useful is "
     "selected AND their words don't name a subject (e.g. \"can you help me solve this "
     "problem\" with nothing selected). Put a short in-character spoken clarifying question "

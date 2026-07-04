@@ -493,12 +493,12 @@ export function useExcalidrawAgent(
           const scene = api.getSceneElements().filter((e) => !e.isDeleted)
           const toBox = (e: any): Box => ({ x: e.x, y: e.y, w: e.width, h: e.height })
           let box: Box | null = null
-          let label = '🔭 Zoomed out to review the whole drawing'
+          let label = 'Zoomed out to review the whole drawing'
           if (action.ids?.length) {
             const want = new Set(action.ids)
             box = contentBounds(scene.filter((e) => want.has(e.id)).map(toBox))
             if (box) box = boxExpandBy(box, 80)
-            label = `🔍 Zoomed in to inspect ${action.ids.length} shape${action.ids.length > 1 ? 's' : ''}`
+            label = `Zoomed in to inspect ${action.ids.length} shape${action.ids.length > 1 ? 's' : ''}`
           } else if (action.bounds) {
             box = {
               x: action.bounds.x + origin.x,
@@ -506,7 +506,7 @@ export function useExcalidrawAgent(
               w: action.bounds.w,
               h: action.bounds.h,
             }
-            label = '🔍 Zoomed in to take a closer look'
+            label = 'Zoomed in to take a closer look'
           } else {
             // Zoom out to fit everything the agent has drawn.
             const mine = scene.filter((e) => agentElementIdsRef.current.has(e.id))
@@ -545,7 +545,7 @@ export function useExcalidrawAgent(
           const where = dir === 'down' ? 'downward' : dir === 'both' ? 'right & down' : 'to the right'
           push({
             kind: 'action',
-            text: `🗺️ Expanded my drawing area ${where} — now ${grown.w}×${grown.h}`,
+            text: `Expanded my drawing area ${where} — now ${grown.w}×${grown.h}`,
           })
           break
         }
@@ -574,7 +574,7 @@ export function useExcalidrawAgent(
               expressions: exprs,
               box,
             }
-            push({ kind: 'action', text: `📊 Plotting ${exprs.join(', ')} to trace it accurately…` })
+            push({ kind: 'action', text: `Plotting ${exprs.join(', ')} to trace it accurately…` })
           }
           break
         }
@@ -592,7 +592,7 @@ export function useExcalidrawAgent(
                 ? { x: action.x + origin.x, y: action.y + origin.y, w: action.width, h: action.height }
                 : null
             pendingRegionRef.current = { lower, upper, xmin: action.xmin, xmax: action.xmax, box }
-            push({ kind: 'action', text: `📐 Drawing the region between ${lower} and ${upper}…` })
+            push({ kind: 'action', text: `Drawing the region between ${lower} and ${upper}…` })
           }
           break
         }
@@ -939,7 +939,7 @@ export function useExcalidrawAgent(
                   }
                 })
                 applyToCanvas()
-                push({ kind: 'action', text: '📐 Drew the region figure — adding integrals…' })
+                push({ kind: 'action', text: 'Drew the region figure — adding integrals…' })
                 const figRight = Math.round(rbox.x + rbox.w - originRef.current.x)
                 const figTop = Math.round(rbox.y - originRef.current.y)
                 const note =
@@ -1015,7 +1015,7 @@ export function useExcalidrawAgent(
                 axis(`gcurve-graph-${graphRefBudget}-axx`, graph.xAxis)
                 axis(`gcurve-graph-${graphRefBudget}-axy`, graph.yAxis)
                 applyToCanvas()
-                push({ kind: 'action', text: '📈 Drew the graph — labeling it…' })
+                push({ kind: 'action', text: 'Drew the graph — labeling it…' })
                 const curveIds = graph.curves
                   .map((_c, ci) => `gcurve-graph-${graphRefBudget}-${ci}-0`)
                   .join(', ')
@@ -1080,7 +1080,7 @@ export function useExcalidrawAgent(
         }
 
         api.setToast({
-          message: `✏️ ${AGENT_NAME} is drawing nearby — open “${AGENT_NAME}'s view” to follow`,
+          message: `${AGENT_NAME} is drawing nearby — open “${AGENT_NAME}'s view” to follow`,
           duration: 4000,
         })
 

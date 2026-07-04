@@ -9,6 +9,7 @@ import apiClient from '../api'
 import { ChatPanel } from '../excalidraw-agent/ChatPanel'
 import { useExcalidrawAgent } from '../excalidraw-agent/useExcalidrawAgent'
 import { AgentViewOverlay } from '../excalidraw-agent/AgentViewOverlay'
+import { JacobSprite } from '../excalidraw-agent/JacobSprite'
 import { GrapherModal } from '../grapher/GrapherModal'
 import { GrapherBoundary } from '../grapher/GrapherBoundary'
 import { useLessonPlayer } from '../lesson/useLessonPlayer'
@@ -71,7 +72,13 @@ export default function Whiteboard() {
   )
 
   const agent = useExcalidrawAgent(api, openGrapher)
-  const lesson = useLessonPlayer(api)
+  // Voice "show me this as an animation" → the chat orchestrator, whose router
+  // sends it down the Manim pipeline (video + save prompt appear in the chat).
+  const onVoiceAnimate = useCallback(
+    (prompt: string) => void agent.sendMessage(`Create a visual animation of: ${prompt}`),
+    [agent.sendMessage]
+  )
+  const lesson = useLessonPlayer(api, onVoiceAnimate)
 
   // ── Dev-only R&D test bridge ────────────────────────────────────────────────
   // Exposes the Excalidraw API + agent handles on `window.__ex` so the Playwright
@@ -262,14 +269,7 @@ export default function Whiteboard() {
               Back to Dashboard
             </MainMenu.Item>
             <MainMenu.Separator />
-            <MainMenu.Item
-              onSelect={() => saveToAccount(false)}
-              icon={
-                <span style={{ fontSize: 14, lineHeight: 1 }} aria-hidden>
-                  💾
-                </span>
-              }
-            >
+            <MainMenu.Item onSelect={() => saveToAccount(false)}>
               {session.id ? 'Save whiteboard' : 'Save to my account'}
             </MainMenu.Item>
             {session.id && (
@@ -293,14 +293,29 @@ export default function Whiteboard() {
           </WelcomeScreen>
         </Excalidraw>
 
+        {lesson.digest && (
+          <button
+            onClick={lesson.moveOn}
+            style={{
+              position: 'absolute', bottom: 84, left: '50%', transform: 'translateX(-50%)',
+              zIndex: 7, border: 'none', borderRadius: 8, padding: '9px 20px',
+              fontSize: 14, fontWeight: 600, cursor: 'pointer', color: '#fff',
+              background: '#4f46e5',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
+            }}
+          >
+            Ready to move on →
+          </button>
+        )}
+
         {lesson.caption && (
           <div
             style={{
               position: 'absolute', bottom: 24, left: '50%', transform: 'translateX(-50%)',
               zIndex: 6, maxWidth: '72%', textAlign: 'center',
-              background: 'rgba(23,19,52,0.82)', color: '#fff', borderRadius: 12,
-              padding: '10px 18px', fontSize: 15, lineHeight: 1.4,
-              backdropFilter: 'blur(8px)', boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+              background: 'rgba(24,24,27,0.88)', color: '#fff', borderRadius: 10,
+              padding: '10px 16px', fontSize: 15, lineHeight: 1.4,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
             }}
           >
             {lesson.caption}
@@ -313,6 +328,7 @@ export default function Whiteboard() {
           name={agent.agentName}
           onGoto={agent.goToAgentView}
         />
+        <JacobSprite api={api} view={agent.agentView} active={agent.isGenerating} />
         {agent.agentView && (
           <button
             onClick={agent.goToAgentView}

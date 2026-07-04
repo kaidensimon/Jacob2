@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from 'react'
+import { exportToBlob } from '@excalidraw/excalidraw'
 import type { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types'
 import type { ExcalidrawElement } from '@excalidraw/excalidraw/element/types'
 import { shapesToElements } from '../excalidraw-agent/convert'
@@ -37,22 +38,63 @@ function readSelection(api: ExcalidrawImperativeAPI) {
   return { count: selIds.size, text: parts.join('; ').slice(0, 2000), image }
 }
 
+// Export the whole board as a PNG dataURL — injected into the sidebar
+// elaboration agent so a fresh context can SEE what's been drawn.
+async function snapshotBoard(api: ExcalidrawImperativeAPI): Promise<string | null> {
+  const els = api.getSceneElements().filter((e) => !e.isDeleted)
+  if (els.length === 0) return null
+  const blob = await exportToBlob({
+    elements: els,
+    appState: { ...api.getAppState(), exportBackground: true },
+    files: api.getFiles(),
+    mimeType: 'image/png',
+    exportPadding: 24,
+    getDimensions: (w: number, h: number) => {
+      const max = 1200
+      const s = Math.min(1, max / Math.max(w, h))
+      return { width: w * s, height: h * s, scale: s }
+    },
+  })
+  return await new Promise<string>((resolve, reject) => {
+    const r = new FileReader()
+    r.onloadend = () => resolve(r.result as string)
+    r.onerror = reject
+    r.readAsDataURL(blob)
+  })
+}
+
 type PlayerStatus = 'idle' | 'connecting' | 'listening' | 'thinking' | 'teaching' | 'error'
 
-export function useLessonPlayer(api: ExcalidrawImperativeAPI | null) {
+export function useLessonPlayer(
+  api: ExcalidrawImperativeAPI | null,
+  onAnimate?: (prompt: string) => void
+) {
   const [status, setStatus] = useState<PlayerStatus>('idle')
   const [voiceOn, setVoiceOn] = useState(false)
   const [caption, setCaption] = useState('')
   const [transcript, setTranscript] = useState('')
+  // post-cleanup "digest" window: true while the ready-to-move-on button shows
+  const [digest, setDigest] = useState(false)
 
   const wsRef = useRef<WebSocket | null>(null)
   const lessonElsRef = useRef<Set<string>>(new Set())
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const chunksRef = useRef<BlobPart[]>([])
   const mimeRef = useRef('audio/mpeg')
+  // Progressive playback (MediaSource): play chunks as they stream in instead
+  // of waiting for the whole clip. chunksRef stays as the fallback path.
+  const msRef = useRef<MediaSource | null>(null)
+  const sbRef = useRef<SourceBuffer | null>(null)
+  const pendingRef = useRef<ArrayBuffer[]>([])
+  const streamingRef = useRef(false)
+  const streamEndedRef = useRef(false)
+  const gotBytesRef = useRef(false)
   // mic
   const micCtxRef = useRef<AudioContext | null>(null)
   const micStreamRef = useRef<MediaStream | null>(null)
+  // keep the latest callback without retriggering the ws handler
+  const onAnimateRef = useRef(onAnimate)
+  onAnimateRef.current = onAnimate
 
   const send = (obj: any) => wsRef.current?.send(JSON.stringify(obj))
   const ack = useCallback(() => send({ type: 'audioEnded' }), [])
@@ -116,9 +158,56 @@ export function useLessonPlayer(api: ExcalidrawImperativeAPI | null) {
 
   // ── audio ────────────────────────────────────────────────────────────────────
   const stopAudio = useCallback(() => {
-    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null }
+    streamingRef.current = false
+    pendingRef.current = []
+    sbRef.current = null
+    msRef.current = null
+    if (audioRef.current) {
+      const a = audioRef.current
+      audioRef.current = null
+      a.onended = null; a.onerror = null
+      a.pause()
+      if (a.src.startsWith('blob:')) URL.revokeObjectURL(a.src)
+      a.removeAttribute('src')
+    }
     window.speechSynthesis?.cancel()
   }, [])
+
+  // Feed the SourceBuffer one pending chunk at a time; close the stream once
+  // the server said audioEnd and everything has been appended.
+  const pump = useCallback(() => {
+    const ms = msRef.current, sb = sbRef.current
+    if (!ms || !sb || ms.readyState !== 'open' || sb.updating) return
+    const next = pendingRef.current.shift()
+    if (next) {
+      try { sb.appendBuffer(next) } catch { stopAudio(); ack() }
+    } else if (streamEndedRef.current) {
+      try { ms.endOfStream() } catch { /* already closed */ }
+    }
+  }, [ack, stopAudio])
+
+  const startStream = useCallback((mime: string) => {
+    const ms = new MediaSource()
+    msRef.current = ms
+    streamingRef.current = true
+    streamEndedRef.current = false
+    gotBytesRef.current = false
+    pendingRef.current = []
+    const audio = new Audio(URL.createObjectURL(ms))
+    audioRef.current = audio
+    audio.onended = ack
+    audio.onerror = ack
+    ms.addEventListener('sourceopen', () => {
+      if (msRef.current !== ms) return // barged in before the source opened
+      URL.revokeObjectURL(audio.src)
+      const sb = ms.addSourceBuffer(mime)
+      sbRef.current = sb
+      sb.addEventListener('updateend', pump)
+      sb.addEventListener('error', () => { stopAudio(); ack() })
+      pump()
+    })
+    audio.play().catch(ack) // starts as soon as the first chunk is buffered
+  }, [ack, pump, stopAudio])
 
   const playClip = useCallback(() => {
     const blob = new Blob(chunksRef.current, { type: mimeRef.current })
@@ -140,12 +229,54 @@ export function useLessonPlayer(api: ExcalidrawImperativeAPI | null) {
   // ── message handling ──────────────────────────────────────────────────────────
   const handle = useCallback(
     async (ev: MessageEvent) => {
-      if (typeof ev.data !== 'string') { chunksRef.current.push(ev.data); return }
+      if (typeof ev.data !== 'string') {
+        if (streamingRef.current) {
+          gotBytesRef.current = true
+          pendingRef.current.push(ev.data)
+          pump()
+        } else {
+          chunksRef.current.push(ev.data)
+        }
+        return
+      }
       const msg = JSON.parse(ev.data)
       switch (msg.type) {
         case 'getContext':
           send({ type: 'context', selection: api ? readSelection(api) : {} })
           break
+        case 'getSnapshot': {
+          let image: string | null = null
+          try {
+            if (api) image = await snapshotBoard(api)
+          } catch { /* empty/unavailable board */ }
+          send({ type: 'snapshot', image })
+          break
+        }
+        case 'animate': onAnimateRef.current?.(msg.prompt || ''); break
+        case 'getIssues': {
+          // Run the real readability detector on JUST this section's elements.
+          let issues: string[] = []
+          try {
+            if (api) {
+              const { detectIssues } = await import('../excalidraw-agent/detect')
+              const ids = new Set<string>(msg.ids || [])
+              const els = api
+                .getSceneElements()
+                .filter((e) => ids.has(e.id) || ids.has((e as any).containerId))
+              issues = detectIssues(els).map((i: any) => i.desc)
+            }
+          } catch { /* detector unavailable */ }
+          send({ type: 'issues', issues })
+          break
+        }
+        case 'replaceShapes':
+          // Cleaned-up section: loadShapes drops the old lesson elements and
+          // converts the fixed ones; reveal everything at once, camera on it.
+          await loadShapes(msg.shapes, msg.origin)
+          revealIds((msg.shapes || []).map((s: AgentShape) => s.id), true)
+          break
+        case 'digest': setDigest(true); break
+        case 'digestDone': setDigest(false); break
         case 'listening': setStatus('listening'); break
         case 'thinking': setStatus('thinking'); break
         case 'lessonStarted': setStatus('teaching'); setCaption(''); break
@@ -154,17 +285,34 @@ export function useLessonPlayer(api: ExcalidrawImperativeAPI | null) {
         case 'emphasize': break
         case 'beat': setCaption(msg.say); break
         case 'answer': setCaption(msg.text); break
-        case 'audioStart': chunksRef.current = []; mimeRef.current = msg.mime || 'audio/mpeg'; break
-        case 'audioEnd': playClip(); break
-        case 'speak': speakFallback(msg.text); break
+        case 'audioStart': {
+          stopAudio()
+          const mime = msg.mime || 'audio/mpeg'
+          mimeRef.current = mime
+          if (typeof MediaSource !== 'undefined' && MediaSource.isTypeSupported(mime)) {
+            startStream(mime)
+          } else {
+            chunksRef.current = []
+          }
+          break
+        }
+        case 'audioEnd':
+          if (streamingRef.current) {
+            if (!gotBytesRef.current) { stopAudio(); ack() } // empty clip — nothing to play
+            else { streamEndedRef.current = true; pump() }
+          } else {
+            playClip()
+          }
+          break
+        case 'speak': stopAudio(); speakFallback(msg.text); break
         case 'stopAudio': stopAudio(); break
         case 'transcript': setTranscript(msg.final ? '' : msg.text); break
         case 'sectionDone': break
-        case 'lessonDone': setStatus(voiceOn ? 'listening' : 'idle'); setCaption(''); break
+        case 'lessonDone': setStatus(voiceOn ? 'listening' : 'idle'); setCaption(''); setDigest(false); break
         case 'error': console.error('lesson error:', msg.message); break
       }
     },
-    [api, loadShapes, revealIds, playClip, speakFallback, stopAudio, voiceOn]
+    [api, loadShapes, revealIds, playClip, speakFallback, stopAudio, startStream, pump, ack, voiceOn]
   )
 
   const connect = useCallback(
@@ -232,8 +380,14 @@ export function useLessonPlayer(api: ExcalidrawImperativeAPI | null) {
   const disableVoice = useCallback(() => {
     stopMic(); stopAudio()
     send({ type: 'voiceOff' }); send({ type: 'stop' })
-    setVoiceOn(false); setStatus('idle'); setCaption(''); setTranscript('')
+    setVoiceOn(false); setStatus('idle'); setCaption(''); setTranscript(''); setDigest(false)
   }, [stopMic, stopAudio])
+
+  // "Ready to move on" — skips the post-cleanup digest timer.
+  const moveOn = useCallback(() => {
+    send({ type: 'moveOn' })
+    setDigest(false)
+  }, [])
 
   const toggleVoice = useCallback(() => {
     if (voiceOn) disableVoice(); else void enableVoice()
@@ -245,5 +399,5 @@ export function useLessonPlayer(api: ExcalidrawImperativeAPI | null) {
     await connect(); send({ type: 'startLesson', topic })
   }, [connect])
 
-  return { toggleVoice, enableVoice, disableVoice, teach, voiceOn, status, caption, transcript }
+  return { toggleVoice, enableVoice, disableVoice, teach, voiceOn, status, caption, transcript, digest, moveOn }
 }

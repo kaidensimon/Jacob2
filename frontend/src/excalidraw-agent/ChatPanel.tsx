@@ -22,11 +22,11 @@ interface Props {
 }
 
 const VOICE_STATUS_LABEL: Record<string, string> = {
-  connecting: 'connecting…',
-  listening: '🎙️ listening — ask me to teach you something',
-  thinking: 'thinking…',
-  teaching: 'teaching — talk any time to butt in',
-  error: 'voice error — check the mic / keys',
+  connecting: 'Connecting…',
+  listening: 'Listening — ask me to teach you something',
+  thinking: 'Thinking…',
+  teaching: 'Teaching — talk any time to butt in',
+  error: 'Voice error — check the mic / keys',
 }
 
 export function ChatPanel({
@@ -66,11 +66,11 @@ export function ChatPanel({
               onClick={voiceTutor.toggle}
               title={voiceTutor.on ? 'Turn off Voice Tutor Mode' : 'Turn on Voice Tutor Mode'}
             >
-              {voiceTutor.on ? '🎙️ Voice tutor: on' : '🎙️ Voice tutor'}
+              {voiceTutor.on ? 'Voice tutor: on' : 'Voice tutor'}
             </button>
           )}
           <button className="ex-chat-newchat" onClick={onNewChat} title="New chat">
-            ＋
+            +
           </button>
         </div>
       </div>
@@ -88,10 +88,10 @@ export function ChatPanel({
 
       <div className="ex-grapher-bar">
         <button className="ex-grapher-btn" onClick={() => onOpenGrapher('2d')}>
-          📈 2D Graph
+          2D Graph
         </button>
         <button className="ex-grapher-btn" onClick={() => onOpenGrapher('3d')}>
-          🧊 3D Graph
+          3D Graph
         </button>
       </div>
 
@@ -155,7 +155,7 @@ function ChatRow({
     case 'action':
       return (
         <div className="ex-row ex-row-action">
-          <span className="ex-row-action-dot">✎</span> {item.text}
+          <span className="ex-row-action-dot">•</span> {item.text}
         </div>
       )
     case 'error':
