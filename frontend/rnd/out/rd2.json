@@ -1,0 +1,201 @@
+{
+ "zorder": [
+  {
+   "z": 0,
+   "id": "pet_cluster",
+   "type": "ellipse",
+   "x": 70,
+   "y": 95,
+   "w": 300,
+   "h": 240,
+   "bg": "#e7f5ff"
+  },
+  {
+   "z": 1,
+   "id": "vehicle_cluster",
+   "type": "ellipse",
+   "x": 455,
+   "y": 105,
+   "w": 300,
+   "h": 225,
+   "bg": "#ebfbee"
+  },
+  {
+   "z": 2,
+   "id": "banana",
+   "type": "ellipse",
+   "x": 835,
+   "y": 405,
+   "w": 137,
+   "h": 80,
+   "bg": "#ffe8cc"
+  },
+  {
+   "z": 3,
+   "id": "kitten",
+   "type": "ellipse",
+   "x": 170,
+   "y": 260,
+   "w": 125,
+   "h": 80,
+   "bg": "#a5d8ff"
+  },
+  {
+   "z": 4,
+   "id": "truck",
+   "type": "ellipse",
+   "x": 625,
+   "y": 220,
+   "w": 113,
+   "h": 80,
+   "bg": "#b2f2bb"
+  },
+  {
+   "z": 5,
+   "id": "dog",
+   "type": "ellipse",
+   "x": 235,
+   "y": 195,
+   "w": 89,
+   "h": 80,
+   "bg": "#a5d8ff"
+  },
+  {
+   "z": 6,
+   "id": "cat",
+   "type": "ellipse",
+   "x": 125,
+   "y": 175,
+   "w": 86,
+   "h": 80,
+   "bg": "#a5d8ff"
+  },
+  {
+   "z": 7,
+   "id": "car",
+   "type": "ellipse",
+   "x": 515,
+   "y": 185,
+   "w": 85,
+   "h": 80,
+   "bg": "#b2f2bb"
+  },
+  {
+   "z": 8,
+   "id": "pet_label",
+   "type": "text",
+   "x": 155,
+   "y": 110,
+   "w": 107,
+   "h": 25,
+   "bg": "transparent",
+   "text": "pet cluster"
+  },
+  {
+   "z": 9,
+   "id": "vehicle_label",
+   "type": "text",
+   "x": 535,
+   "y": 120,
+   "w": 137,
+   "h": 25,
+   "bg": "transparent",
+   "text": "vehicle cluster"
+  },
+  {
+   "z": 10,
+   "id": "far_note",
+   "type": "text",
+   "x": 764,
+   "y": 505,
+   "w": 170,
+   "h": 25,
+   "bg": "transparent",
+   "text": "far = less related"
+  },
+  {
+   "z": 11,
+   "id": "caption",
+   "type": "text",
+   "x": 250,
+   "y": 710,
+   "w": 494,
+   "h": 35,
+   "bg": "transparent",
+   "text": "closer points = more similar meanings"
+  },
+  {
+   "z": 12,
+   "id": "lGuzPxWPgwfELTr9W0ixW",
+   "type": "text",
+   "x": 870,
+   "y": 433,
+   "w": 67,
+   "h": 25,
+   "bg": "transparent",
+   "text": "banana",
+   "containerId": "banana"
+  },
+  {
+   "z": 13,
+   "id": "AZB7xxBsSXf-sDh5zlKD9",
+   "type": "text",
+   "x": 203,
+   "y": 288,
+   "w": 59,
+   "h": 25,
+   "bg": "transparent",
+   "text": "kitten",
+   "containerId": "kitten"
+  },
+  {
+   "z": 14,
+   "id": "NfXJi9zVmz35Nqk-ax_OL",
+   "type": "text",
+   "x": 656,
+   "y": 248,
+   "w": 51,
+   "h": 25,
+   "bg": "transparent",
+   "text": "truck",
+   "containerId": "truck"
+  },
+  {
+   "z": 15,
+   "id": "cGmuWGHXcSuC9rnS7L-mc",
+   "type": "text",
+   "x": 262,
+   "y": 223,
+   "w": 35,
+   "h": 25,
+   "bg": "transparent",
+   "text": "dog",
+   "containerId": "dog"
+  },
+  {
+   "z": 16,
+   "id": "eLTS__RMSP1atKF7k-C05",
+   "type": "text",
+   "x": 152,
+   "y": 203,
+   "w": 33,
+   "h": 25,
+   "bg": "transparent",
+   "text": "cat",
+   "containerId": "cat"
+  },
+  {
+   "z": 17,
+   "id": "A2GQo2LIGkXTBK4OcjO0J",
+   "type": "text",
+   "x": 543,
+   "y": 213,
+   "w": 30,
+   "h": 25,
+   "bg": "transparent",
+   "text": "car",
+   "containerId": "car"
+  }
+ ],
+ "issues": []
+}

@@ -18,7 +18,7 @@ from django.http import JsonResponse, StreamingHttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
-from .agent_views import build_completion_kwargs, extract_actions, get_model_name
+from .agent_views import asgi_stream, build_completion_kwargs, extract_actions, get_model_name
 
 # ─── System prompt ────────────────────────────────────────────────────────────
 
@@ -462,7 +462,7 @@ def excalidraw_stream(request):
         return _cors(JsonResponse({'error': 'Invalid JSON body'}, status=400))
 
     response = StreamingHttpResponse(
-        _stream_events(prompt_data, api_key),
+        asgi_stream(_stream_events(prompt_data, api_key)),
         content_type='text/event-stream',
     )
     response['Cache-Control'] = 'no-cache, no-transform'

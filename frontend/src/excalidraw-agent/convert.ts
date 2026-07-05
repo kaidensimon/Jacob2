@@ -112,6 +112,101 @@ function fitLabelledContainer(
   return { width: Math.max(width, minW), height: Math.max(height, minH) }
 }
 
+// ── arrow routing: avoid stabbing shapes the arrow doesn't connect ───────────
+function ccw(ax: number, ay: number, bx: number, by: number, cx: number, cy: number) {
+  return (cy - ay) * (bx - ax) > (by - ay) * (cx - ax)
+}
+function segSeg(
+  ax: number, ay: number, bx: number, by: number,
+  cx: number, cy: number, dx: number, dy: number
+) {
+  return (
+    ccw(ax, ay, cx, cy, dx, dy) !== ccw(bx, by, cx, cy, dx, dy) &&
+    ccw(ax, ay, bx, by, cx, cy) !== ccw(ax, ay, bx, by, dx, dy)
+  )
+}
+// Does segment a-b pass through box `o` (shrunk a bit so edge-grazing is fine)?
+function segHitsBox(ax: number, ay: number, bx: number, by: number, o: Bounds): boolean {
+  const sx = o.x + o.width * 0.12
+  const sy = o.y + o.height * 0.12
+  const sw = o.width * 0.76
+  const sh = o.height * 0.76
+  const inside = (x: number, y: number) => x >= sx && x <= sx + sw && y >= sy && y <= sy + sh
+  if (inside(ax, ay) || inside(bx, by)) return false // touches it — structural, not a stab
+  const x2 = sx + sw
+  const y2 = sy + sh
+  return (
+    segSeg(ax, ay, bx, by, sx, sy, x2, sy) ||
+    segSeg(ax, ay, bx, by, x2, sy, x2, y2) ||
+    segSeg(ax, ay, bx, by, x2, y2, sx, y2) ||
+    segSeg(ax, ay, bx, by, sx, y2, sx, sy)
+  )
+}
+
+/**
+ * Route an arrow from `a` to `b`. If the straight line stabs any obstacle
+ * (a shape it doesn't connect), return an ELBOW path that arcs above or below
+ * the obstacles instead — e.g. a long-range arrow across a row of boxes hops
+ * over the row rather than striking through it. O(obstacles) per arrow.
+ */
+function routeArrow(
+  a: { x: number; y: number },
+  b: { x: number; y: number },
+  fromB: Bounds | undefined,
+  toB: Bounds | undefined,
+  obstacles: Bounds[]
+): { x: number; y: number }[] {
+  const hit = obstacles.filter((o) => segHitsBox(a.x, a.y, b.x, b.y, o))
+  if (hit.length === 0) return [a, b]
+  const CLR = 30
+  const fromTop = fromB ? fromB.y : a.y
+  const toTop = toB ? toB.y : b.y
+  const fromBot = fromB ? fromB.y + fromB.height : a.y
+  const toBot = toB ? toB.y + toB.height : b.y
+  const topY = Math.min(...hit.map((o) => o.y), fromTop, toTop) - CLR
+  const botY = Math.max(...hit.map((o) => o.y + o.height), fromBot, toBot) + CLR
+  // pick the side with the smaller detour from the straight line
+  const midY = (a.y + b.y) / 2
+  const cy = Math.abs(midY - topY) <= Math.abs(botY - midY) ? topY : botY
+  // exit from the top/bottom edge of the endpoint shapes, straight up/down,
+  // across at the clearance line, then into the target
+  const a2 = fromB ? edgePoint(fromB, { x: centerOf(fromB).x, y: cy }, 6) : a
+  const b2 = toB ? edgePoint(toB, { x: centerOf(toB).x, y: cy }, 6) : b
+  return [a2, { x: a2.x, y: cy }, { x: b2.x, y: cy }, b2]
+}
+
+// Big "region" containers (clusters, spaces, zones) hold other shapes, so their
+// label must act as a HEADER at the top — Excalidraw's default centered label
+// would land exactly where the contents are.
+const REGION_MIN_H = 150
+
+// Deterministic z-order, independent of the order the model emitted shapes:
+// closed shapes big→small (a container can never cover its contents), then
+// images (math), then connectors, then standalone text always on top.
+const Z_GROUP: Record<string, number> = {
+  rectangle: 0, ellipse: 0, diamond: 0,
+  image: 1,
+  line: 2, arrow: 2,
+  text: 3,
+}
+
+function depthSort(skeletons: Skeleton[]): Skeleton[] {
+  return skeletons
+    .map((s, i) => ({ s, i }))
+    .sort((a, b) => {
+      const ga = Z_GROUP[a.s.type] ?? 1
+      const gb = Z_GROUP[b.s.type] ?? 1
+      if (ga !== gb) return ga - gb
+      if (ga === 0) {
+        const areaA = (a.s.width ?? 0) * (a.s.height ?? 0)
+        const areaB = (b.s.width ?? 0) * (b.s.height ?? 0)
+        if (areaA !== areaB) return areaB - areaA // bigger drawn first = behind
+      }
+      return a.i - b.i // stable within a group
+    })
+    .map((x) => x.s)
+}
+
 function commonStyle(shape: AgentShape): Skeleton {
   const s: Skeleton = {}
   if (shape.strokeColor) s.strokeColor = shape.strokeColor
@@ -139,6 +234,22 @@ export function buildSkeletons(
     return externalBounds.get(id)
   }
 
+  // Solid shapes an arrow must not stab: everything except itself and the two
+  // shapes it connects. (Endpoint-inside cases are exempted by segHitsBox.)
+  const obstaclesFor = (arrow: AgentShape): Bounds[] => {
+    const out: Bounds[] = []
+    for (const other of shapes.values()) {
+      if (other.id === arrow.id || other.id === arrow.fromId || other.id === arrow.toId) continue
+      if (
+        other.type === 'rectangle' || other.type === 'ellipse' ||
+        other.type === 'diamond' || other.type === 'math'
+      ) {
+        out.push(agentBounds(other))
+      }
+    }
+    return out
+  }
+
   const skeletons: Skeleton[] = []
 
   for (const shape of shapes.values()) {
@@ -163,7 +274,16 @@ export function buildSkeletons(
           y: shape.y ?? 0,
           width: fitted.width,
           height: fitted.height,
-          ...(shape.text ? { label: { text: fixCanvasGlyphs(shape.text) } } : {}),
+          ...(shape.text
+            ? {
+                label: {
+                  text: fixCanvasGlyphs(shape.text),
+                  // Region-sized containers get a top header, not a centered
+                  // label buried under their contents.
+                  ...(fitted.height >= REGION_MIN_H ? { verticalAlign: 'top' } : {}),
+                },
+              }
+            : {}),
           ...commonStyle(shape),
         })
         break
@@ -222,12 +342,13 @@ export function buildSkeletons(
           const cb = toB ? centerOf(toB) : centerOf(fromB!)
           const a = fromB ? edgePoint(fromB, cb, GAP) : ca
           const b = toB ? edgePoint(toB, ca, GAP) : cb
-          sk.x = a.x
-          sk.y = a.y
-          sk.points = [
-            [0, 0],
-            [b.x - a.x, b.y - a.y],
-          ]
+          // Everything solid this arrow does NOT connect is an obstacle; if the
+          // straight line stabs one, hop over/under it with an elbow path.
+          const path = routeArrow(a, b, fromB, toB, obstaclesFor(shape))
+          const p0 = path[0]
+          sk.x = p0.x
+          sk.y = p0.y
+          sk.points = path.map((p) => [p.x - p0.x, p.y - p0.y])
           // Excalidraw can only BIND arrows to closed shapes / text — binding to
           // a line or arrow throws and nukes the whole batch. For non-bindable
           // targets we keep the computed geometry (the arrow still points at
@@ -254,6 +375,20 @@ export function buildSkeletons(
               [w, h],
             ]
           }
+          // Raw-geometry ARROWS (no resolvable fromId/toId) used to bypass all
+          // stab protection — a straight one can strike through half a row of
+          // boxes. Give simple 2-point arrows the same obstacle avoidance.
+          // Plain `line`s are left alone (axes/dividers cross things on purpose).
+          if (shape.type === 'arrow' && sk.points.length === 2) {
+            const a = { x: sk.x + sk.points[0][0], y: sk.y + sk.points[0][1] }
+            const b = { x: sk.x + sk.points[1][0], y: sk.y + sk.points[1][1] }
+            const path = routeArrow(a, b, undefined, undefined, obstaclesFor(shape))
+            if (path.length > 2) {
+              sk.x = path[0].x
+              sk.y = path[0].y
+              sk.points = path.map((p) => [p.x - path[0].x, p.y - path[0].y])
+            }
+          }
         }
 
         if (shape.type === 'arrow' && shape.text) sk.label = { text: fixCanvasGlyphs(shape.text) }
@@ -274,13 +409,29 @@ export function shapesToElements(
   shapes: Map<string, AgentShape>,
   externalBounds: Map<string, Bounds>
 ): ExcalidrawElement[] {
-  const skeletons = buildSkeletons(shapes, externalBounds)
+  const skeletons = depthSort(buildSkeletons(shapes, externalBounds))
   if (skeletons.length === 0) return []
   try {
     return convertToExcalidrawElements(skeletons as any, {
       regenerateIds: false,
     }) as ExcalidrawElement[]
-  } catch {
-    return []
+  } catch (err) {
+    // Never fail silently — a swallowed throw here renders an entire batch as
+    // NOTHING, which is far worse than a messy drawing.
+    console.error('shapesToElements: conversion threw, retrying without bindings', err)
+    // Degrade gracefully: drop live arrow bindings (the usual thrower) and
+    // retry, so at worst arrows lose re-routing, not the whole scene.
+    try {
+      const stripped = skeletons.map((s) => {
+        const { start, end, ...rest } = s
+        return rest
+      })
+      return convertToExcalidrawElements(stripped as any, {
+        regenerateIds: false,
+      }) as ExcalidrawElement[]
+    } catch (err2) {
+      console.error('shapesToElements: retry failed too', err2)
+      return []
+    }
   }
 }

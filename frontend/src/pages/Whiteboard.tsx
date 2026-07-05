@@ -13,6 +13,7 @@ import { JacobSprite } from '../excalidraw-agent/JacobSprite'
 import { GrapherModal } from '../grapher/GrapherModal'
 import { GrapherBoundary } from '../grapher/GrapherBoundary'
 import { useLessonPlayer } from '../lesson/useLessonPlayer'
+import { JacobTalking } from '../lesson/JacobTalking'
 
 const STORAGE_KEY = 'excalidraw-session'
 
@@ -99,6 +100,7 @@ export default function Whiteboard() {
       isGenerating: agent.isGenerating,
       chat: agent.chat,
       agentView: agent.agentView,
+      teach: lesson.teach,
       async exportScene() {
         if (!api) return null
         const els = api.getSceneElements().filter((e) => !e.isDeleted)
@@ -122,8 +124,19 @@ export default function Whiteboard() {
         const { detectIssues } = await import('../excalidraw-agent/detect')
         return detectIssues(api.getSceneElements())
       },
+      // Render a raw agent-shape array through the REAL converter (z-sort,
+      // label fitting, arrow clipping) — lets R&D tests exercise the renderer
+      // deterministically without an LLM call.
+      async renderRaw(shapes: any[]) {
+        if (!api) return 0
+        const { shapesToElements } = await import('../excalidraw-agent/convert')
+        const map = new Map<string, any>(shapes.map((s: any) => [s.id, s]))
+        const els = shapesToElements(map, new Map())
+        api.updateScene({ elements: els })
+        return els.length
+      },
     }
-  }, [api, agent.sendMessage, agent.stop, agent.newChat, agent.isGenerating, agent.chat, agent.agentView])
+  }, [api, agent.sendMessage, agent.stop, agent.newChat, agent.isGenerating, agent.chat, agent.agentView, lesson.teach])
 
   // Load the scene: from the account if ?session=<id>, else from localStorage.
   useEffect(() => {
@@ -324,12 +337,16 @@ export default function Whiteboard() {
 
         <AgentViewOverlay
           api={api}
-          view={agent.agentView}
+          view={lesson.status === 'teaching' ? null : agent.agentView}
           name={agent.agentName}
           onGoto={agent.goToAgentView}
         />
         <JacobSprite api={api} view={agent.agentView} active={agent.isGenerating} />
-        {agent.agentView && (
+        <JacobTalking
+          visible={lesson.voiceOn || lesson.status === 'teaching'}
+          speaking={lesson.speaking}
+        />
+        {agent.agentView && lesson.status !== 'teaching' && (
           <button
             onClick={agent.goToAgentView}
             style={{

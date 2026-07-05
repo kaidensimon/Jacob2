@@ -27,9 +27,10 @@ interface ShapeItem {
 interface Seg {
   id: string
   label?: string
-  ax: number
+  pts: [number, number][] // absolute polyline (arrows may be elbow-routed)
+  ax: number // first point (kept for endpoint checks)
   ay: number
-  bx: number
+  bx: number // last point
   by: number
   boundIds: Set<string>
 }
@@ -185,24 +186,32 @@ export function detectIssues(elements: readonly any[]): DetectedIssue[] {
         h: e.height,
       })
     } else if ((e.type === 'arrow' || e.type === 'line') && Array.isArray(e.points) && e.points.length >= 2) {
-      const p0 = e.points[0]
-      const pn = e.points[e.points.length - 1]
+      const pts = e.points.map((p: number[]) => [e.x + p[0], e.y + p[1]] as [number, number])
       const boundIds = new Set<string>()
       if (e.startBinding?.elementId) boundIds.add(e.startBinding.elementId)
       if (e.endBinding?.elementId) boundIds.add(e.endBinding.elementId)
       segs.push({
         id: e.id,
         label: typeof e.text === 'string' && e.text ? e.text : undefined,
-        ax: e.x + p0[0],
-        ay: e.y + p0[1],
-        bx: e.x + pn[0],
-        by: e.y + pn[1],
+        pts,
+        ax: pts[0][0],
+        ay: pts[0][1],
+        bx: pts[pts.length - 1][0],
+        by: pts[pts.length - 1][1],
         boundIds,
       })
     }
   }
 
   const found: DetectedIssue[] = []
+
+  // Names for texts that are actually ARROW labels — the fixer can't move a
+  // bound label directly, so tell it which arrow owns the text.
+  const segIds = new Set(segs.map((s) => s.id))
+  const nme = (t: TextItem) =>
+    t.containerId && segIds.has(t.containerId)
+      ? `${nmeText(t)} (the label of arrow ${t.containerId})`
+      : nmeText(t)
 
   const shapeBoxById = new Map<string, Box>()
   for (const s of shapes) shapeBoxById.set(s.id, { x: s.x, y: s.y, w: s.w, h: s.h })
@@ -229,7 +238,7 @@ export function detectIssues(elements: readonly any[]): DetectedIssue[] {
         const m = movable(pick)
         found.push({
           rank: 1000,
-          desc: `${nmeText(a)} overlaps ${nmeText(b)}`,
+          desc: `${nme(a)} overlaps ${nme(b)}`,
           moveId: m.id,
           moveBox: m.box,
         })
@@ -241,12 +250,15 @@ export function detectIssues(elements: readonly any[]): DetectedIssue[] {
   for (const t of texts) {
     for (const s of segs) {
       if (t.containerId === s.id) continue // it's the arrow's own label
-      const d = pointSegDist(t.cx, t.cy, s.ax, s.ay, s.bx, s.by)
+      let d = Infinity
+      for (let k = 0; k + 1 < s.pts.length; k++) {
+        d = Math.min(d, pointSegDist(t.cx, t.cy, s.pts[k][0], s.pts[k][1], s.pts[k + 1][0], s.pts[k + 1][1]))
+      }
       if (d < t.h / 2 + 8) {
         const m = movable(t)
         found.push({
           rank: 900,
-          desc: `${nmeText(t)} is sitting on top of arrow/line ${s.id}`,
+          desc: `${nme(t)} is sitting on top of arrow/line ${s.id}`,
           moveId: m.id,
           moveBox: m.box,
         })
@@ -260,9 +272,20 @@ export function detectIssues(elements: readonly any[]): DetectedIssue[] {
     for (const sh of shapes) {
       if (s.boundIds.has(sh.id)) continue // it connects this shape — fine
       if (sh.w < 2 || sh.h < 2) continue
+      // An arrow with an endpoint INSIDE a shape isn't stabbing it — it either
+      // connects something within the container or enters/exits it, both
+      // structural. True stabbing = both endpoints outside, segment through it.
+      const inside = (x: number, y: number) =>
+        x >= sh.x && x <= sh.x + sh.w && y >= sh.y && y <= sh.y + sh.h
+      if (inside(s.ax, s.ay) || inside(s.bx, s.by)) continue
       // shrink the shape a touch so an arrow just grazing an edge isn't flagged
       const box = { x: sh.x + sh.w * 0.1, y: sh.y + sh.h * 0.1, w: sh.w * 0.8, h: sh.h * 0.8 }
-      if (segIntersectsBox(s.ax, s.ay, s.bx, s.by, box)) {
+      // trace the REAL polyline (elbow-routed arrows are not straight chords)
+      let hits = false
+      for (let k = 0; k + 1 < s.pts.length && !hits; k++) {
+        hits = segIntersectsBox(s.pts[k][0], s.pts[k][1], s.pts[k + 1][0], s.pts[k + 1][1], box)
+      }
+      if (hits) {
         found.push({ rank: 800, desc: `arrow/line ${s.id} passes through ${nmeShape(sh)}` })
       }
     }
@@ -300,7 +323,31 @@ export function detectIssues(elements: readonly any[]): DetectedIssue[] {
     }
   }
 
-  // 5. A bound label that doesn't fit its container — text cut off / overflowing.
+  // 5. Standalone text (incl. equations) CROSSING a shape's border — half in,
+  //    half out, so the stroke slices through the words, or the text spills out
+  //    of the box it was meant to sit in, or a shape sits on top of a label.
+  //    Text FULLY INSIDE a shape (a caption within a region) is intentional.
+  for (const t of texts) {
+    if (t.containerId) continue // bound labels are the container's problem
+    const tArea = Math.max(1, t.w * t.h)
+    for (const sh of shapes) {
+      const area = overlapArea(t.x, t.y, t.w, t.h, sh.x, sh.y, sh.w, sh.h)
+      if (area <= tArea * 0.08) continue // barely grazing — ignore
+      const P = 6
+      const fullyInside =
+        t.x >= sh.x + P && t.y >= sh.y + P &&
+        t.x + t.w <= sh.x + sh.w - P && t.y + t.h <= sh.y + sh.h - P
+      if (fullyInside) continue
+      found.push({
+        rank: 750,
+        desc: `${nmeText(t)} crosses the border of ${nmeShape(sh)} — it gets clipped/covered`,
+        moveId: t.id,
+        moveBox: { x: t.x, y: t.y, w: t.w, h: t.h },
+      })
+    }
+  }
+
+  // 6. A bound label that doesn't fit its container — text cut off / overflowing.
   //    Excalidraw wraps bound text to the container width, so a label whose
   //    measured box is WIDER than its container has an unwrappable token spilling
   //    out (or the box was made far too small). We report the mismatch (with the

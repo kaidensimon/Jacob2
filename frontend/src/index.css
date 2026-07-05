@@ -115,6 +115,26 @@ body {
   .jacob-sprite, .jacob-sprite-img, .jacob-sprite-leave { animation: none; }
 }
 
+/* Voice-tutor Jacob: stands bottom-left, mouth animates while he talks */
+.jacob-talking {
+  position: absolute;
+  left: 16px;
+  bottom: 64px; /* clear of the zoom controls */
+  z-index: 5;
+  pointer-events: none;
+  animation: jacob-pop-in 0.4s ease-out both;
+}
+.jacob-talking img {
+  width: 118px;
+  height: 118px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.22));
+}
+@keyframes jacob-pop-in {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: none; }
+}
+
 /* ===================== Excalidraw + AI Assistant Layout ===================== */
 
 .ex-layout {

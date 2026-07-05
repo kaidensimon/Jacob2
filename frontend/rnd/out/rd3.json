@@ -1,0 +1,223 @@
+{
+ "zorder": [
+  {
+   "z": 0,
+   "id": "encoder_outer",
+   "type": "rectangle",
+   "x": 240,
+   "y": 90,
+   "w": 520,
+   "h": 560,
+   "bg": "#f8f9fa"
+  },
+  {
+   "z": 1,
+   "id": "mha_box",
+   "type": "rectangle",
+   "x": 310,
+   "y": 300,
+   "w": 380,
+   "h": 150,
+   "bg": "#e5dbff"
+  },
+  {
+   "z": 2,
+   "id": "ff_box",
+   "type": "rectangle",
+   "x": 340,
+   "y": 500,
+   "w": 320,
+   "h": 75,
+   "bg": "#d3f9d8"
+  },
+  {
+   "z": 3,
+   "id": "input_box",
+   "type": "rectangle",
+   "x": 395,
+   "y": 180,
+   "w": 210,
+   "h": 60,
+   "bg": "#d0ebff"
+  },
+  {
+   "z": 4,
+   "id": "output_box",
+   "type": "rectangle",
+   "x": 395,
+   "y": 700,
+   "w": 210,
+   "h": 60,
+   "bg": "#ffe8cc"
+  },
+  {
+   "z": 5,
+   "id": "head1",
+   "type": "rectangle",
+   "x": 350,
+   "y": 365,
+   "w": 80,
+   "h": 56,
+   "bg": "#f3f0ff"
+  },
+  {
+   "z": 6,
+   "id": "head2",
+   "type": "rectangle",
+   "x": 460,
+   "y": 365,
+   "w": 80,
+   "h": 56,
+   "bg": "#f3f0ff"
+  },
+  {
+   "z": 7,
+   "id": "head3",
+   "type": "rectangle",
+   "x": 570,
+   "y": 365,
+   "w": 80,
+   "h": 56,
+   "bg": "#f3f0ff"
+  },
+  {
+   "z": 8,
+   "id": "arrow_input_mha",
+   "type": "arrow",
+   "x": 500,
+   "y": 246,
+   "w": 0,
+   "h": 48,
+   "bg": "transparent"
+  },
+  {
+   "z": 9,
+   "id": "arrow_mha_ff",
+   "type": "arrow",
+   "x": 500,
+   "y": 456,
+   "w": 0,
+   "h": 38,
+   "bg": "transparent"
+  },
+  {
+   "z": 10,
+   "id": "arrow_ff_output",
+   "type": "arrow",
+   "x": 500,
+   "y": 581,
+   "w": 0,
+   "h": 113,
+   "bg": "transparent"
+  },
+  {
+   "z": 11,
+   "id": "encoder_title",
+   "type": "text",
+   "x": 390,
+   "y": 115,
+   "w": 193,
+   "h": 35,
+   "bg": "transparent",
+   "text": "Encoder Layer"
+  },
+  {
+   "z": 12,
+   "id": "caption",
+   "type": "text",
+   "x": 295,
+   "y": 805,
+   "w": 378,
+   "h": 25,
+   "bg": "transparent",
+   "text": "residual connections skip each sublayer"
+  },
+  {
+   "z": 13,
+   "id": "x4RPLSoqzwySSGtsyzT2v",
+   "type": "text",
+   "x": 398,
+   "y": 305,
+   "w": 204,
+   "h": 25,
+   "bg": "transparent",
+   "text": "Multi-Head Attention",
+   "containerId": "mha_box"
+  },
+  {
+   "z": 14,
+   "id": "v1OPcGJiwPwrG6tQxKvgk",
+   "type": "text",
+   "x": 434,
+   "y": 525,
+   "w": 132,
+   "h": 25,
+   "bg": "transparent",
+   "text": "Feed Forward",
+   "containerId": "ff_box"
+  },
+  {
+   "z": 15,
+   "id": "ZHB_U54kN36c62sLltW0Z",
+   "type": "text",
+   "x": 473,
+   "y": 198,
+   "w": 54,
+   "h": 25,
+   "bg": "transparent",
+   "text": "Input",
+   "containerId": "input_box"
+  },
+  {
+   "z": 16,
+   "id": "XpcNinLYpfSFhWXxuubbY",
+   "type": "text",
+   "x": 465,
+   "y": 718,
+   "w": 70,
+   "h": 25,
+   "bg": "transparent",
+   "text": "Output",
+   "containerId": "output_box"
+  },
+  {
+   "z": 17,
+   "id": "Crv4GsvAXEVFACTTNf9kO",
+   "type": "text",
+   "x": 380,
+   "y": 381,
+   "w": 20,
+   "h": 25,
+   "bg": "transparent",
+   "text": "h1",
+   "containerId": "head1"
+  },
+  {
+   "z": 18,
+   "id": "yFTmsN04tWO2yBi6THHEx",
+   "type": "text",
+   "x": 487,
+   "y": 381,
+   "w": 25,
+   "h": 25,
+   "bg": "transparent",
+   "text": "h2",
+   "containerId": "head2"
+  },
+  {
+   "z": 19,
+   "id": "kfpeu4Jn90hybs_r2RIsP",
+   "type": "text",
+   "x": 598,
+   "y": 381,
+   "w": 23,
+   "h": 25,
+   "bg": "transparent",
+   "text": "h3",
+   "containerId": "head3"
+  }
+ ],
+ "issues": [
+  "arrow/line arrow_ff_output passes through encoder_outer"
+ ]
+}

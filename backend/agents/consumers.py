@@ -319,15 +319,27 @@ class LessonConsumer(AsyncWebsocketConsumer):
         if not issues:
             return
         await self._speak_canned(random.choice(APOLOGY_LINES))
-        try:
-            fixed = await asyncio.to_thread(fix_section, shapes, issues, _key('OPENAI_API_KEY'))
-            new_shapes = _tidy_shapes(fixed.get('shapes') or [])
-        except Exception as e:
-            await self.send_json({'type': 'error', 'message': f'cleanup failed: {e}'})
-            new_shapes = []
-        if not new_shapes:
-            return  # fix pass failed — don't fake a cleanup, just move on
-        await self.send_json({'type': 'replaceShapes', 'shapes': new_shapes, 'origin': origin})
+        # Bounded verify-fix loop: fix, re-run the detector, and if problems
+        # remain give it ONE more round. Never trust a fix blindly.
+        current = shapes
+        replaced = False
+        for _ in range(2):
+            try:
+                fixed = await asyncio.to_thread(fix_section, current, issues, _key('OPENAI_API_KEY'))
+                new_shapes = _tidy_shapes(fixed.get('shapes') or [])
+            except Exception as e:
+                await self.send_json({'type': 'error', 'message': f'cleanup failed: {e}'})
+                break
+            if not new_shapes:
+                break  # fix pass failed — don't fake a cleanup
+            current = new_shapes
+            replaced = True
+            await self.send_json({'type': 'replaceShapes', 'shapes': new_shapes, 'origin': origin})
+            issues = await self._resolve_issues(ids)
+            if not issues:
+                break
+        if not replaced:
+            return
         await self._speak_canned(random.choice(DIGEST_LINES))
         self._move_on.clear()
         await self.send_json({'type': 'digest', 'seconds': DIGEST_SECONDS})

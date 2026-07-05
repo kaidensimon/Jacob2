@@ -1,0 +1,286 @@
+{
+ "shapes": [
+  {
+   "id": "title",
+   "type": "text",
+   "x": 40,
+   "y": 28,
+   "width": 400,
+   "height": 42,
+   "text": "Meaning as Distance",
+   "fontSize": 36
+  },
+  {
+   "id": "space",
+   "type": "rectangle",
+   "x": 50,
+   "y": 90,
+   "width": 860,
+   "height": 500,
+   "text": "Embedding space",
+   "strokeColor": "#4B5563",
+   "backgroundColor": "#F9FAFB",
+   "fontSize": 20
+  },
+  {
+   "id": "petCluster",
+   "type": "ellipse",
+   "x": 115,
+   "y": 170,
+   "width": 280,
+   "height": 235,
+   "text": "Pet / animal cluster",
+   "strokeColor": "#22C55E",
+   "backgroundColor": "#DCFCE7",
+   "fontSize": 20
+  },
+  {
+   "id": "dog",
+   "type": "ellipse",
+   "x": 155,
+   "y": 240,
+   "width": 80,
+   "height": 52,
+   "text": "dog",
+   "strokeColor": "#15803D",
+   "backgroundColor": "#FFFFFF",
+   "fontSize": 20
+  },
+  {
+   "id": "cat",
+   "type": "ellipse",
+   "x": 255,
+   "y": 225,
+   "width": 80,
+   "height": 52,
+   "text": "cat",
+   "strokeColor": "#15803D",
+   "backgroundColor": "#FFFFFF",
+   "fontSize": 20
+  },
+  {
+   "id": "puppy",
+   "type": "ellipse",
+   "x": 205,
+   "y": 315,
+   "width": 96,
+   "height": 52,
+   "text": "puppy",
+   "strokeColor": "#15803D",
+   "backgroundColor": "#FFFFFF",
+   "fontSize": 20
+  },
+  {
+   "id": "petDist",
+   "type": "line",
+   "x": 0,
+   "y": 0,
+   "width": 0,
+   "height": 0,
+   "fromId": "dog",
+   "toId": "cat",
+   "strokeColor": "#16A34A"
+  },
+  {
+   "id": "vehicleCluster",
+   "type": "ellipse",
+   "x": 520,
+   "y": 145,
+   "width": 300,
+   "height": 250,
+   "text": "Vehicle cluster",
+   "strokeColor": "#3B82F6",
+   "backgroundColor": "#DBEAFE",
+   "fontSize": 20
+  },
+  {
+   "id": "car",
+   "type": "ellipse",
+   "x": 565,
+   "y": 230,
+   "width": 80,
+   "height": 52,
+   "text": "car",
+   "strokeColor": "#1D4ED8",
+   "backgroundColor": "#FFFFFF",
+   "fontSize": 20
+  },
+  {
+   "id": "truck",
+   "type": "ellipse",
+   "x": 675,
+   "y": 215,
+   "width": 92,
+   "height": 52,
+   "text": "truck",
+   "strokeColor": "#1D4ED8",
+   "backgroundColor": "#FFFFFF",
+   "fontSize": 20
+  },
+  {
+   "id": "bus",
+   "type": "ellipse",
+   "x": 640,
+   "y": 310,
+   "width": 80,
+   "height": 52,
+   "text": "bus",
+   "strokeColor": "#1D4ED8",
+   "backgroundColor": "#FFFFFF",
+   "fontSize": 20
+  },
+  {
+   "id": "vehicleDist",
+   "type": "line",
+   "x": 0,
+   "y": 0,
+   "width": 0,
+   "height": 0,
+   "fromId": "car",
+   "toId": "truck",
+   "strokeColor": "#2563EB"
+  },
+  {
+   "id": "outlier",
+   "type": "ellipse",
+   "x": 430,
+   "y": 485,
+   "width": 120,
+   "height": 60,
+   "text": "democracy",
+   "strokeColor": "#9333EA",
+   "backgroundColor": "#F3E8FF",
+   "fontSize": 20
+  },
+  {
+   "id": "farArrow1",
+   "type": "arrow",
+   "x": 0,
+   "y": 0,
+   "width": 0,
+   "height": 0,
+   "fromId": "petCluster",
+   "toId": "outlier",
+   "text": "far = different meaning",
+   "strokeColor": "#9333EA",
+   "fontSize": 16
+  },
+  {
+   "id": "farArrow2",
+   "type": "arrow",
+   "x": 0,
+   "y": 0,
+   "width": 0,
+   "height": 0,
+   "fromId": "vehicleCluster",
+   "toId": "outlier",
+   "strokeColor": "#9333EA"
+  },
+  {
+   "id": "nearNote",
+   "type": "text",
+   "x": 115,
+   "y": 435,
+   "width": 260,
+   "height": 40,
+   "text": "near = similar meaning",
+   "fontSize": 24,
+   "strokeColor": "#111827"
+  },
+  {
+   "id": "farNote",
+   "type": "text",
+   "x": 610,
+   "y": 455,
+   "width": 250,
+   "height": 40,
+   "text": "far = less related",
+   "fontSize": 24,
+   "strokeColor": "#111827"
+  }
+ ],
+ "beats": [
+  {
+   "say": "Alright mate, think of this as a big map where words get parked by meaning, not by spelling or alphabet crap.",
+   "reveal": [
+    "title",
+    "space"
+   ],
+   "emphasize": [
+    "space"
+   ]
+  },
+  {
+   "say": "Words about pets and animals land close together here, because their meanings are bloody similar.",
+   "reveal": [
+    "petCluster",
+    "dog",
+    "cat",
+    "puppy"
+   ],
+   "emphasize": [
+    "petCluster"
+   ]
+  },
+  {
+   "say": "So dog, cat, and puppy are neighbours on the map; that short gap is the whole point, mate.",
+   "reveal": [
+    "petDist",
+    "nearNote"
+   ],
+   "emphasize": [
+    "dog",
+    "cat",
+    "puppy",
+    "nearNote"
+   ]
+  },
+  {
+   "say": "Over here, vehicle words form their own little crew, because car, truck, and bus share a different kind of meaning.",
+   "reveal": [
+    "vehicleCluster",
+    "car",
+    "truck",
+    "bus"
+   ],
+   "emphasize": [
+    "vehicleCluster"
+   ]
+  },
+  {
+   "say": "Same deal again: car and truck sit close, so the embedding is saying, yep, these are related, no dramas.",
+   "reveal": [
+    "vehicleDist"
+   ],
+   "emphasize": [
+    "car",
+    "truck",
+    "vehicleDist"
+   ]
+  },
+  {
+   "say": "Now chuck in a word like democracy, and it lands miles away from both pets and vehicles, because it’s about a totally different idea.",
+   "reveal": [
+    "outlier",
+    "farArrow1",
+    "farArrow2",
+    "farNote"
+   ],
+   "emphasize": [
+    "outlier",
+    "farArrow1",
+    "farArrow2",
+    "farNote"
+   ]
+  },
+  {
+   "say": "That’s the ripper takeaway: in an embedding space, nearby words usually mean similar things, and far-apart words are less related. Too easy.",
+   "reveal": [],
+   "emphasize": [
+    "nearNote",
+    "farNote",
+    "space"
+   ]
+  }
+ ]
+}

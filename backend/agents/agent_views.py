@@ -384,6 +384,28 @@ def get_model_name(prompt_data: dict) -> str:
     return DEFAULT_MODEL
 
 
+def asgi_stream(sync_iter):
+    """Adapt a sync SSE generator to an ASYNC iterator for StreamingHttpResponse.
+
+    Under ASGI (daphne), Django fully consumes a synchronous iterator before
+    sending ANY of it — which silently turned our shape-by-shape streaming into
+    one buffered dump at the end. An async iterator is streamed chunk-by-chunk,
+    so we pull items off the sync generator one at a time in a worker thread.
+    """
+    import asyncio
+    done = object()
+    it = iter(sync_iter)
+
+    async def gen():
+        while True:
+            item = await asyncio.to_thread(next, it, done)
+            if item is done:
+                return
+            yield item
+
+    return gen()
+
+
 def build_completion_kwargs(model: str, messages: list) -> dict:
     kwargs = {
         'model': model,
@@ -508,7 +530,7 @@ def agent_stream(request):
         return JsonResponse({'error': 'Invalid JSON body'}, status=400)
 
     response = StreamingHttpResponse(
-        _stream_events(prompt_data, api_key),
+        asgi_stream(_stream_events(prompt_data, api_key)),
         content_type='text/event-stream',
     )
     response['Cache-Control'] = 'no-cache, no-transform'

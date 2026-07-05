@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { exportToBlob } from '@excalidraw/excalidraw'
 import type { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types'
 import type { ExcalidrawElement } from '@excalidraw/excalidraw/element/types'
@@ -75,6 +75,8 @@ export function useLessonPlayer(
   const [transcript, setTranscript] = useState('')
   // post-cleanup "digest" window: true while the ready-to-move-on button shows
   const [digest, setDigest] = useState(false)
+  // true while a TTS clip is actually playing — drives the talking sprite
+  const [speaking, setSpeaking] = useState(false)
 
   const wsRef = useRef<WebSocket | null>(null)
   const lessonElsRef = useRef<Set<string>>(new Set())
@@ -97,30 +99,71 @@ export function useLessonPlayer(
   onAnimateRef.current = onAnimate
 
   const send = (obj: any) => wsRef.current?.send(JSON.stringify(obj))
-  const ack = useCallback(() => send({ type: 'audioEnded' }), [])
+  const ack = useCallback(() => {
+    setSpeaking(false)
+    send({ type: 'audioEnded' })
+  }, [])
 
   // ── canvas reveal ────────────────────────────────────────────────────────────
+  // Shapes don't pop in as one clump: each fades in over REVEAL_MS, staggered
+  // REVEAL_STAGGER apart in the order the beat introduces them, so the board
+  // looks like it's being drawn out while Jacob talks.
+  const REVEAL_STAGGER = 180
+  const REVEAL_MS = 320
+  const animsRef = useRef<Map<string, number>>(new Map()) // elementId -> start time
+  const animRafRef = useRef<number | undefined>(undefined)
+
+  const pumpReveal = useCallback(() => {
+    const anims = animsRef.current
+    if (!api || anims.size === 0) {
+      animRafRef.current = undefined
+      return
+    }
+    const now = performance.now()
+    let changed = false
+    const els = api.getSceneElements().map((e) => {
+      const start = anims.get(e.id)
+      if (start === undefined) return e
+      const t = (now - start) / REVEAL_MS
+      if (t < 0) return e // this shape's turn hasn't come yet
+      if (t >= 1) anims.delete(e.id)
+      changed = true
+      return { ...e, opacity: Math.min(100, Math.round(100 * t)) } as ExcalidrawElement
+    })
+    if (changed) api.updateScene({ elements: els })
+    animRafRef.current = requestAnimationFrame(pumpReveal)
+  }, [api])
+
   const revealIds = useCallback(
     (ids: string[], camera: boolean) => {
       if (!api) return
-      const set = new Set(ids)
+      const now = performance.now()
+      const startFor = new Map<string, number>()
+      ids.forEach((id, i) => startFor.set(id, now + i * REVEAL_STAGGER))
       const revealed: ExcalidrawElement[] = []
-      const els = api.getSceneElements().map((e) => {
-        if (set.has(e.id) || set.has((e as any).containerId)) {
-          revealed.push(e)
-          return { ...e, opacity: 100 } as ExcalidrawElement
-        }
-        return e
-      })
-      api.updateScene({ elements: els })
+      for (const e of api.getSceneElements()) {
+        const start =
+          startFor.get(e.id) ??
+          ((e as any).containerId ? startFor.get((e as any).containerId) : undefined)
+        if (start === undefined || (e as any).opacity === 100) continue
+        animsRef.current.set(e.id, start) // bound labels share their box's turn
+        revealed.push(e)
+      }
       if (camera && revealed.length) {
         try {
           api.scrollToContent(revealed, { fitToContent: true, animate: true, duration: 500 } as any)
         } catch { /* older API */ }
       }
+      if (animsRef.current.size > 0 && animRafRef.current === undefined) {
+        animRafRef.current = requestAnimationFrame(pumpReveal)
+      }
     },
-    [api]
+    [api, pumpReveal]
   )
+
+  useEffect(() => () => {
+    if (animRafRef.current) cancelAnimationFrame(animRafRef.current)
+  }, [])
 
   const loadShapes = useCallback(
     async (shapes: AgentShape[], origin: { x: number; y: number }) => {
@@ -152,12 +195,20 @@ export function useLessonPlayer(
       const hidden = converted.map((e) => ({ ...e, opacity: 0 }) as ExcalidrawElement)
       const userEls = api.getSceneElements().filter((e) => !lessonElsRef.current.has(e.id))
       api.updateScene({ elements: [...userEls, ...hidden] })
+      // Bring the camera to this section's board right away, so the learner is
+      // already looking at the right spot when the first beat starts drawing.
+      if (hidden.length) {
+        try {
+          api.scrollToContent(hidden, { fitToContent: true, animate: true, duration: 600 } as any)
+        } catch { /* older API */ }
+      }
     },
     [api]
   )
 
   // ── audio ────────────────────────────────────────────────────────────────────
   const stopAudio = useCallback(() => {
+    setSpeaking(false)
     streamingRef.current = false
     pendingRef.current = []
     sbRef.current = null
@@ -197,6 +248,7 @@ export function useLessonPlayer(
     audioRef.current = audio
     audio.onended = ack
     audio.onerror = ack
+    audio.onplaying = () => setSpeaking(true)
     ms.addEventListener('sourceopen', () => {
       if (msRef.current !== ms) return // barged in before the source opened
       URL.revokeObjectURL(audio.src)
@@ -216,12 +268,14 @@ export function useLessonPlayer(
     audioRef.current = audio
     audio.onended = ack
     audio.onerror = ack
+    audio.onplaying = () => setSpeaking(true)
     audio.play().catch(ack)
   }, [ack])
 
   const speakFallback = useCallback((text: string) => {
     if (!('speechSynthesis' in window) || !text.trim()) return ack()
     const u = new SpeechSynthesisUtterance(text)
+    u.onstart = () => setSpeaking(true)
     u.onend = ack; u.onerror = ack
     window.speechSynthesis.cancel(); window.speechSynthesis.speak(u)
   }, [ack])
@@ -399,5 +453,5 @@ export function useLessonPlayer(
     await connect(); send({ type: 'startLesson', topic })
   }, [connect])
 
-  return { toggleVoice, enableVoice, disableVoice, teach, voiceOn, status, caption, transcript, digest, moveOn }
+  return { toggleVoice, enableVoice, disableVoice, teach, voiceOn, status, caption, transcript, digest, moveOn, speaking }
 }

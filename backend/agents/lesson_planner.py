@@ -115,7 +115,9 @@ Lay this section's diagram out in a clean region roughly (0,0) to (960,640). x �
 2. Order beats so the board builds up naturally as the narration proceeds.
 3. Keep it to ONE board's worth — this section's single idea. Don't teach the whole topic.
 4. Build on what was already taught (given as context) — don't redraw or re-explain it; you may refer back to it in words.
-5. Valid JSON only, no prose outside it.""" + PERSONA
+5. Standalone "text" shapes go in CLEAR whitespace — never on top of or crossing any other shape. To label a shape, use ITS `text` property instead of a separate text shape.
+6. A large region/cluster container's label renders as a header at its TOP — keep the top band of a big container empty and place its contents in the middle/lower area, with the contents' own labels clear of each other.
+7. Valid JSON only, no prose outside it.""" + PERSONA
 
 
 def plan_section(topic: str, section: dict, prior_sections: list, api_key: str, model: str = None) -> dict:
@@ -161,9 +163,10 @@ def answer_utterance(topic: str, question: str, prior_sections: list, api_key: s
 FIX_SYSTEM = r"""You clean up ONE section of a whiteboard lesson diagram that has readability problems. You get the section's shapes (the same format they were planned in) and a list of DETECTED issues (overlaps, text overflowing its box, cramped spacing, things poking outside the region).
 
 Return the FULL corrected shape list. You decide where things move — spread shapes out, widen boxes that clip their text, nudge labels clear of other shapes. Rules:
-- Keep every shape's id, type and meaning. Don't delete or add shapes; don't rewrite the content (only reposition/resize; tweak fontSize only if that's what's broken).
+- Keep every shape's id, type and meaning. Don't delete or add shapes; don't rewrite teaching content (only reposition/resize; tweak fontSize only if that's what's broken).
 - Keep the layout inside roughly (0,0) to (960,640) with generous whitespace (~40-60px between things). x right, y down, x/y is each shape's top-left.
-- Arrows with fromId/toId follow their shapes automatically — return them unchanged.
+- Arrows with fromId/toId route between their shapes automatically, and an arrow's `text` label renders at the arrow's MIDPOINT. If an arrow's label collides with something, you MAY: move the other element clear of the arrow's midpoint, move the shapes the arrow connects (which moves the midpoint), shorten the arrow's `text`, or delete the arrow's `text` entirely when the meaning is already conveyed elsewhere. Otherwise return arrows unchanged.
+- Standalone text must sit in clear whitespace — never crossing a shape border or lying on an arrow's path.
 - Multi-line text uses REAL newlines in the JSON string, never the two characters backslash-n.
 Respond ONLY with JSON: {"shapes": [ <the full corrected list> ]}"""
 
