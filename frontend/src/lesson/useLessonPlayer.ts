@@ -94,6 +94,8 @@ export function useLessonPlayer(
   // mic
   const micCtxRef = useRef<AudioContext | null>(null)
   const micStreamRef = useRef<MediaStream | null>(null)
+  // live mic spectrum for the waveform indicator (read via rAF, no re-renders)
+  const analyserRef = useRef<AnalyserNode | null>(null)
   // keep the latest callback without retriggering the ws handler
   const onAnimateRef = useRef(onAnimate)
   onAnimateRef.current = onAnimate
@@ -398,6 +400,11 @@ export function useLessonPlayer(
     const ctx = new AudioContext({ sampleRate: 16000 })
     micCtxRef.current = ctx
     const src = ctx.createMediaStreamSource(stream)
+    const analyser = ctx.createAnalyser()
+    analyser.fftSize = 128
+    analyser.smoothingTimeConstant = 0.7
+    src.connect(analyser)
+    analyserRef.current = analyser
     const proc = ctx.createScriptProcessor(4096, 1, 1)
     proc.onaudioprocess = (e) => {
       const f32 = e.inputBuffer.getChannelData(0)
@@ -412,6 +419,7 @@ export function useLessonPlayer(
   }, [])
 
   const stopMic = useCallback(() => {
+    analyserRef.current = null
     micCtxRef.current?.close().catch(() => {})
     micCtxRef.current = null
     micStreamRef.current?.getTracks().forEach((t) => t.stop())
@@ -453,5 +461,5 @@ export function useLessonPlayer(
     await connect(); send({ type: 'startLesson', topic })
   }, [connect])
 
-  return { toggleVoice, enableVoice, disableVoice, teach, voiceOn, status, caption, transcript, digest, moveOn, speaking }
+  return { toggleVoice, enableVoice, disableVoice, teach, voiceOn, status, caption, transcript, digest, moveOn, speaking, analyser: analyserRef }
 }

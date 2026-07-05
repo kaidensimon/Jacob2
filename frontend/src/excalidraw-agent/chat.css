@@ -69,6 +69,11 @@
   border-bottom: 1px solid var(--lg-hairline);
   background: #fafafa;
 }
+.ex-voice-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 .ex-voice-status {
   font-size: 11.5px;
   font-weight: 500;

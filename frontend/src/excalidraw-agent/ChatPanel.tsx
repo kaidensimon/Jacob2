@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import type { ChatItem } from './types'
+import { VoiceWave } from '../lesson/VoiceWave'
 import './chat.css'
 
 interface VoiceTutor {
@@ -8,6 +9,7 @@ interface VoiceTutor {
   toggle: () => void
   status: string
   transcript: string
+  analyser: React.RefObject<AnalyserNode | null>
 }
 
 interface Props {
@@ -21,9 +23,9 @@ interface Props {
   voiceTutor?: VoiceTutor
 }
 
+// Listening has no text label — the live waveform IS the status.
 const VOICE_STATUS_LABEL: Record<string, string> = {
   connecting: 'Connecting…',
-  listening: 'Listening — ask me to teach you something',
   thinking: 'Thinking…',
   teaching: 'Teaching — talk any time to butt in',
   error: 'Voice error — check the mic / keys',
@@ -77,9 +79,12 @@ export function ChatPanel({
 
       {voiceTutor?.on && (
         <div className="ex-voice-strip">
-          <span className="ex-voice-status">
-            {VOICE_STATUS_LABEL[voiceTutor.status] ?? voiceTutor.status}
-          </span>
+          <div className="ex-voice-row">
+            <VoiceWave analyser={voiceTutor.analyser} />
+            {VOICE_STATUS_LABEL[voiceTutor.status] && (
+              <span className="ex-voice-status">{VOICE_STATUS_LABEL[voiceTutor.status]}</span>
+            )}
+          </div>
           {voiceTutor.transcript && (
             <span className="ex-voice-transcript">“{voiceTutor.transcript}”</span>
           )}

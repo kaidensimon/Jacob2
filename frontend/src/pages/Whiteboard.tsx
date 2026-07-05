@@ -397,6 +397,7 @@ export default function Whiteboard() {
             toggle: lesson.toggleVoice,
             status: lesson.status,
             transcript: lesson.transcript,
+            analyser: lesson.analyser,
           }}
         />
       </div>
