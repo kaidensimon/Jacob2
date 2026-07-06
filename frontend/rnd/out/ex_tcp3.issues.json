@@ -1,0 +1,4 @@
+[
+ "\"1. SYN\" (the label of arrow synArrow) overlaps \"2. SYN-ACK\" (the label of arrow synAckArrow)",
+ "\"2. SYN-ACK\" (the label of arrow synAckArrow) overlaps \"3. ACK\" (the label of arrow ackArrow)"
+]

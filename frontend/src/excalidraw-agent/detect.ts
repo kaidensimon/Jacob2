@@ -13,10 +13,12 @@ interface TextItem {
   cx: number
   cy: number
   containerId?: string
+  labelOf?: string // relocated arrow label — belongs to this arrow
 }
 
 interface ShapeItem {
   id: string
+  type: string
   label?: string
   x: number
   y: number
@@ -175,10 +177,12 @@ export function detectIssues(elements: readonly any[]): DetectedIssue[] {
         cx: e.x + e.width / 2,
         cy: e.y + e.height / 2,
         containerId: e.containerId || undefined,
+        labelOf: (e as any).customData?.labelOf || undefined,
       })
     } else if (SHAPE_TYPES.has(e.type)) {
       shapes.push({
         id: e.id,
+        type: e.type,
         label: typeof e.text === 'string' && e.text ? e.text : undefined,
         x: e.x,
         y: e.y,
@@ -231,6 +235,19 @@ export function detectIssues(elements: readonly any[]): DetectedIssue[] {
       const a = texts[i]
       const b = texts[j]
       if (a.containerId && a.containerId === b.containerId) continue // same container
+      // A standalone text near a CONTAINER's bound label: the container border
+      // sits between them visually, so padding-only proximity isn't a clump.
+      // Only flag if the standalone text actually touches the container box.
+      const bound =
+        a.containerId && shapeBoxById.has(a.containerId) ? a :
+        b.containerId && shapeBoxById.has(b.containerId) ? b : null
+      if (bound) {
+        const other = bound === a ? b : a
+        if (!other.containerId) {
+          const box = shapeBoxById.get(bound.containerId!)!
+          if (!rectsOverlap(other.x, other.y, other.w, other.h, box.x, box.y, box.w, box.h)) continue
+        }
+      }
       if (textBoxesOverlap(a, b)) {
         // Move the more free-floating of the two (prefer a standalone label over
         // one bound inside a container).
@@ -249,7 +266,7 @@ export function detectIssues(elements: readonly any[]): DetectedIssue[] {
   // 2. Text sitting on an arrow/line (not that line's own label).
   for (const t of texts) {
     for (const s of segs) {
-      if (t.containerId === s.id) continue // it's the arrow's own label
+      if (t.containerId === s.id || t.labelOf === s.id) continue // the arrow's own label
       let d = Infinity
       for (let k = 0; k + 1 < s.pts.length; k++) {
         d = Math.min(d, pointSegDist(t.cx, t.cy, s.pts[k][0], s.pts[k][1], s.pts[k + 1][0], s.pts[k + 1][1]))
@@ -323,7 +340,36 @@ export function detectIssues(elements: readonly any[]): DetectedIssue[] {
     }
   }
 
-  // 5. Standalone text (incl. equations) CROSSING a shape's border — half in,
+  // 5. Two closed shapes PARTIALLY overlapping — neither contains the other,
+  //    so it's a collision, not nesting. Almost always sloppy layout.
+  //    Ellipse-ellipse pairs are exempt: Venn diagrams overlap on purpose.
+  for (let i = 0; i < shapes.length; i++) {
+    for (let j = i + 1; j < shapes.length; j++) {
+      const a = shapes[i]
+      const b = shapes[j]
+      if (a.type === 'ellipse' && b.type === 'ellipse') continue
+      const area = overlapArea(a.x, a.y, a.w, a.h, b.x, b.y, b.w, b.h)
+      if (area === 0) continue
+      const smaller = a.w * a.h <= b.w * b.h ? a : b
+      const bigger = smaller === a ? b : a
+      const P = 6 // tolerance: "basically inside" counts as containment
+      const contained =
+        smaller.x >= bigger.x - P && smaller.y >= bigger.y - P &&
+        smaller.x + smaller.w <= bigger.x + bigger.w + P &&
+        smaller.y + smaller.h <= bigger.y + bigger.h + P
+      if (contained) continue
+      if (area / Math.max(1, smaller.w * smaller.h) > 0.08) {
+        found.push({
+          rank: 850,
+          desc: `${nmeShape(a)} and ${nmeShape(b)} partially overlap — collision, not nesting`,
+          moveId: smaller.id,
+          moveBox: { x: smaller.x, y: smaller.y, w: smaller.w, h: smaller.h },
+        })
+      }
+    }
+  }
+
+  // 6. Standalone text (incl. equations) CROSSING a shape's border — half in,
   //    half out, so the stroke slices through the words, or the text spills out
   //    of the box it was meant to sit in, or a shape sits on top of a label.
   //    Text FULLY INSIDE a shape (a caption within a region) is intentional.
@@ -347,7 +393,37 @@ export function detectIssues(elements: readonly any[]): DetectedIssue[] {
     }
   }
 
-  // 6. A bound label that doesn't fit its container — text cut off / overflowing.
+  // 7. A container's BOUND LABEL colliding with a DIFFERENT shape — e.g. a
+  //    diamond's label spilling past its slanted edges into a neighbouring box.
+  //    (The border-crossing check above skips bound labels, so without this the
+  //    spill is invisible and the cleanup loop honestly reports "clean".)
+  for (const t of texts) {
+    if (!t.containerId) continue
+    const isShapeLabel = shapeBoxById.has(t.containerId)
+    const isArrowLabel = segIds.has(t.containerId)
+    if (!isShapeLabel && !isArrowLabel) continue
+    const tArea = Math.max(1, t.w * t.h)
+    for (const sh of shapes) {
+      if (sh.id === t.containerId) continue // its own container
+      const area = overlapArea(t.x, t.y, t.w, t.h, sh.x, sh.y, sh.w, sh.h)
+      if (area <= tArea * 0.08) continue
+      const P = 6
+      const fullyInside =
+        t.x >= sh.x + P && t.y >= sh.y + P &&
+        t.x + t.w <= sh.x + sh.w - P && t.y + t.h <= sh.y + sh.h - P
+      if (fullyInside) continue // nested container's label inside a region — fine
+      found.push({
+        rank: 780,
+        desc:
+          `the label ${nmeText(t)} of ${isArrowLabel ? 'arrow ' : ''}${t.containerId} ` +
+          `spills onto ${nmeShape(sh)} — move them apart or shorten the label`,
+        moveId: t.containerId,
+        ...(isShapeLabel ? { moveBox: shapeBoxById.get(t.containerId) } : {}),
+      })
+    }
+  }
+
+  // 8. A bound label that doesn't fit its container — text cut off / overflowing.
   //    Excalidraw wraps bound text to the container width, so a label whose
   //    measured box is WIDER than its container has an unwrappable token spilling
   //    out (or the box was made far too small). We report the mismatch (with the

@@ -1,0 +1,172 @@
+{
+ "shapes": [
+  {
+   "id": "title",
+   "type": "text",
+   "x": 280,
+   "y": 30,
+   "width": 400,
+   "height": 40,
+   "text": "TCP three-way handshake",
+   "fontSize": 36
+  },
+  {
+   "id": "clientBox",
+   "type": "rectangle",
+   "x": 90,
+   "y": 110,
+   "width": 210,
+   "height": 70,
+   "text": "Client",
+   "fontSize": 28,
+   "backgroundColor": "#E8F3FF",
+   "strokeColor": "#2B6CB0"
+  },
+  {
+   "id": "serverBox",
+   "type": "rectangle",
+   "x": 660,
+   "y": 110,
+   "width": 210,
+   "height": 70,
+   "text": "Server",
+   "fontSize": 28,
+   "backgroundColor": "#EFFFF4",
+   "strokeColor": "#2F855A"
+  },
+  {
+   "id": "clientLine",
+   "type": "line",
+   "x": 195,
+   "y": 190,
+   "width": 0,
+   "height": 380,
+   "strokeColor": "#2B6CB0"
+  },
+  {
+   "id": "serverLine",
+   "type": "line",
+   "x": 765,
+   "y": 190,
+   "width": 0,
+   "height": 380,
+   "strokeColor": "#2F855A"
+  },
+  {
+   "id": "note",
+   "type": "text",
+   "x": 340,
+   "y": 110,
+   "width": 280,
+   "height": 70,
+   "text": "Before data flows,\nTCP agrees a connection.",
+   "fontSize": 20
+  },
+  {
+   "id": "synArrow",
+   "type": "arrow",
+   "x": 0,
+   "y": 0,
+   "width": 0,
+   "height": 0,
+   "fromId": "clientLine",
+   "toId": "serverLine",
+   "text": "1. SYN",
+   "strokeColor": "#D69E2E"
+  },
+  {
+   "id": "synAckArrow",
+   "type": "arrow",
+   "x": 0,
+   "y": 0,
+   "width": 0,
+   "height": 0,
+   "fromId": "serverLine",
+   "toId": "clientLine",
+   "text": "2. SYN-ACK",
+   "strokeColor": "#805AD5"
+  },
+  {
+   "id": "ackArrow",
+   "type": "arrow",
+   "x": 0,
+   "y": 0,
+   "width": 0,
+   "height": 0,
+   "fromId": "clientLine",
+   "toId": "serverLine",
+   "text": "3. ACK",
+   "strokeColor": "#D69E2E"
+  },
+  {
+   "id": "readyBox",
+   "type": "rectangle",
+   "x": 340,
+   "y": 525,
+   "width": 280,
+   "height": 70,
+   "text": "Connection established\nReady for data",
+   "fontSize": 20,
+   "backgroundColor": "#FFF7D6",
+   "strokeColor": "#B7791F"
+  }
+ ],
+ "beats": [
+  {
+   "say": "Alright mate, TCP doesn't just start flinging data around like a dodgy hose; it does a quick handshake first, no dramas.",
+   "reveal": [
+    "title",
+    "clientBox",
+    "serverBox",
+    "clientLine",
+    "serverLine",
+    "note"
+   ],
+   "emphasize": [
+    "clientBox",
+    "serverBox"
+   ]
+  },
+  {
+   "say": "First up, the client sends a SYN, basically saying, 'Oi server, keen to open a connection?' Bloody simple start.",
+   "reveal": [
+    "synArrow"
+   ],
+   "emphasize": [
+    "synArrow",
+    "clientBox",
+    "serverBox"
+   ]
+  },
+  {
+   "say": "Then the server replies with SYN-ACK, which means, 'Yep, I heard ya, and I'm keen too.' Good on ya, server.",
+   "reveal": [
+    "synAckArrow"
+   ],
+   "emphasize": [
+    "synAckArrow"
+   ]
+  },
+  {
+   "say": "Finally, the client sends ACK back, saying, 'Sweet, I heard your reply.' That's the third step, and she's right to crack on.",
+   "reveal": [
+    "ackArrow"
+   ],
+   "emphasize": [
+    "ackArrow"
+   ]
+  },
+  {
+   "say": "After those three messages, the TCP connection is established, so both sides can start sending the actual data without that setup crap getting in the way.",
+   "reveal": [
+    "readyBox"
+   ],
+   "emphasize": [
+    "synArrow",
+    "synAckArrow",
+    "ackArrow",
+    "readyBox"
+   ]
+  }
+ ]
+}

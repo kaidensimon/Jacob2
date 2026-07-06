@@ -1,0 +1,264 @@
+{
+ "shapes": [
+  {
+   "id": "title",
+   "type": "text",
+   "x": 320,
+   "y": 24,
+   "width": 320,
+   "height": 40,
+   "text": "How a Compiler Works",
+   "fontSize": 28
+  },
+  {
+   "id": "source",
+   "type": "rectangle",
+   "x": 360,
+   "y": 86,
+   "width": 240,
+   "height": 58,
+   "text": "Source code\nwhat you wrote",
+   "backgroundColor": "#E8F3FF",
+   "strokeColor": "#2B6CB0",
+   "fontSize": 20
+  },
+  {
+   "id": "lexer",
+   "type": "rectangle",
+   "x": 360,
+   "y": 174,
+   "width": 240,
+   "height": 58,
+   "text": "Lexer\nsplit into tokens",
+   "backgroundColor": "#F0FFF4",
+   "strokeColor": "#2F855A",
+   "fontSize": 20
+  },
+  {
+   "id": "arrow_source_lexer",
+   "type": "arrow",
+   "x": 0,
+   "y": 0,
+   "width": 0,
+   "height": 0,
+   "fromId": "source",
+   "toId": "lexer",
+   "text": "characters → tokens"
+  },
+  {
+   "id": "parser",
+   "type": "rectangle",
+   "x": 360,
+   "y": 262,
+   "width": 240,
+   "height": 58,
+   "text": "Parser\nbuilds structure",
+   "backgroundColor": "#F0FFF4",
+   "strokeColor": "#2F855A",
+   "fontSize": 20
+  },
+  {
+   "id": "arrow_lexer_parser",
+   "type": "arrow",
+   "x": 0,
+   "y": 0,
+   "width": 0,
+   "height": 0,
+   "fromId": "lexer",
+   "toId": "parser",
+   "text": "tokens → syntax tree"
+  },
+  {
+   "id": "typechecker",
+   "type": "rectangle",
+   "x": 360,
+   "y": 350,
+   "width": 240,
+   "height": 58,
+   "text": "Type checker\ncatches type mistakes",
+   "backgroundColor": "#FFF5E6",
+   "strokeColor": "#C05621",
+   "fontSize": 20
+  },
+  {
+   "id": "arrow_parser_type",
+   "type": "arrow",
+   "x": 0,
+   "y": 0,
+   "width": 0,
+   "height": 0,
+   "fromId": "parser",
+   "toId": "typechecker",
+   "text": "syntax tree → checked tree"
+  },
+  {
+   "id": "codegen",
+   "type": "rectangle",
+   "x": 360,
+   "y": 438,
+   "width": 240,
+   "height": 58,
+   "text": "Code generator\nturns plan into instructions",
+   "backgroundColor": "#F5F0FF",
+   "strokeColor": "#6B46C1",
+   "fontSize": 20
+  },
+  {
+   "id": "arrow_type_codegen",
+   "type": "arrow",
+   "x": 0,
+   "y": 0,
+   "width": 0,
+   "height": 0,
+   "fromId": "typechecker",
+   "toId": "codegen",
+   "text": "checked tree → target code"
+  },
+  {
+   "id": "machine",
+   "type": "rectangle",
+   "x": 360,
+   "y": 526,
+   "width": 240,
+   "height": 58,
+   "text": "Machine code\nCPU can run it",
+   "backgroundColor": "#EDF2F7",
+   "strokeColor": "#4A5568",
+   "fontSize": 20
+  },
+  {
+   "id": "arrow_codegen_machine",
+   "type": "arrow",
+   "x": 0,
+   "y": 0,
+   "width": 0,
+   "height": 0,
+   "fromId": "codegen",
+   "toId": "machine",
+   "text": "instructions"
+  },
+  {
+   "id": "error_box",
+   "type": "rectangle",
+   "x": 680,
+   "y": 292,
+   "width": 220,
+   "height": 116,
+   "text": "Error report\nline number\nmessage\nstop or fix",
+   "backgroundColor": "#FFE8E8",
+   "strokeColor": "#C53030",
+   "fontSize": 20
+  },
+  {
+   "id": "arrow_lexer_error",
+   "type": "arrow",
+   "x": 0,
+   "y": 0,
+   "width": 0,
+   "height": 0,
+   "fromId": "lexer",
+   "toId": "error_box",
+   "text": "bad token"
+  },
+  {
+   "id": "arrow_parser_error",
+   "type": "arrow",
+   "x": 0,
+   "y": 0,
+   "width": 0,
+   "height": 0,
+   "fromId": "parser",
+   "toId": "error_box",
+   "text": "syntax error"
+  },
+  {
+   "id": "arrow_type_error",
+   "type": "arrow",
+   "x": 0,
+   "y": 0,
+   "width": 0,
+   "height": 0,
+   "fromId": "typechecker",
+   "toId": "error_box",
+   "text": "type error"
+  }
+ ],
+ "beats": [
+  {
+   "say": "Righto mate, a compiler is basically a bloody translation pipeline: it takes the code you wrote and turns it into stuff the computer can actually run.",
+   "reveal": [
+    "title",
+    "source"
+   ],
+   "emphasize": [
+    "source"
+   ]
+  },
+  {
+   "say": "First stop is the lexer, which chops the raw characters into tokens — little meaningful chunks like names, numbers, and keywords. Too easy, it’s just cleaning the text into useful bits.",
+   "reveal": [
+    "lexer",
+    "arrow_source_lexer"
+   ],
+   "emphasize": [
+    "lexer",
+    "arrow_source_lexer"
+   ]
+  },
+  {
+   "say": "Then the parser checks whether those tokens fit the language grammar, and builds a structured tree of what the program means. If the order is dodgy, this is where the shit starts complaining.",
+   "reveal": [
+    "parser",
+    "arrow_lexer_parser"
+   ],
+   "emphasize": [
+    "parser"
+   ]
+  },
+  {
+   "say": "Next up, the type checker makes sure the pieces make sense together, like not adding a number to a chunk of text unless the language allows it. This catches heaps of bugs before the program even runs, which is ripper.",
+   "reveal": [
+    "typechecker",
+    "arrow_parser_type"
+   ],
+   "emphasize": [
+    "typechecker"
+   ]
+  },
+  {
+   "say": "Once the program is valid, the code generator turns that checked structure into lower-level instructions for a particular machine or runtime. Same idea, just getting closer to the metal, mate.",
+   "reveal": [
+    "codegen",
+    "arrow_type_codegen"
+   ],
+   "emphasize": [
+    "codegen"
+   ]
+  },
+  {
+   "say": "At the bottom, you get machine code — or something very close to it — that the CPU can execute. That’s the finished compiled output, no dramas.",
+   "reveal": [
+    "machine",
+    "arrow_codegen_machine"
+   ],
+   "emphasize": [
+    "machine"
+   ]
+  },
+  {
+   "say": "But compilers don’t just march downward like happy little robots; if they spot a problem, they branch off and give you an error report. Lexer errors, parser errors, and type errors all point you back to the crap you need to fix, then you crack on again.",
+   "reveal": [
+    "error_box",
+    "arrow_lexer_error",
+    "arrow_parser_error",
+    "arrow_type_error"
+   ],
+   "emphasize": [
+    "error_box",
+    "arrow_lexer_error",
+    "arrow_parser_error",
+    "arrow_type_error"
+   ]
+  }
+ ]
+}

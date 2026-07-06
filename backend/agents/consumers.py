@@ -45,7 +45,8 @@ import httpx
 from channels.generic.websocket import AsyncWebsocketConsumer
 
 from .lesson_planner import (lesson_outline, plan_section, decide_voice_intent,
-                             elaborate_reply, summarize_elaboration, fix_section)
+                             elaborate_reply, summarize_elaboration, fix_section,
+                             critique_board)
 
 RIME_URL = 'https://users.rime.ai/v1/rime-tts'
 RIME_SPEAKER = os.environ.get('RIME_SPEAKER', 'marlu')
@@ -315,17 +316,19 @@ class LessonConsumer(AsyncWebsocketConsumer):
         ids = [s.get('id') for s in shapes if s.get('id')]
         if not ids:
             return
-        issues = await self._resolve_issues(ids)
+        issues, board = await self._gather_problems(ids)
         if not issues:
             return
         await self._speak_canned(random.choice(APOLOGY_LINES))
-        # Bounded verify-fix loop: fix, re-run the detector, and if problems
-        # remain give it ONE more round. Never trust a fix blindly.
+        # Bounded verify-fix loop: each round the fixer SEES the rendered board
+        # (snapshot) plus everything the detector AND the vision critic found.
+        # Up to 3 rounds; a plateau may try again, getting WORSE ends it.
         current = shapes
         replaced = False
-        for _ in range(2):
+        for _ in range(3):
             try:
-                fixed = await asyncio.to_thread(fix_section, current, issues, _key('OPENAI_API_KEY'))
+                fixed = await asyncio.to_thread(
+                    fix_section, current, issues, _key('OPENAI_API_KEY'), board_image=board)
                 new_shapes = _tidy_shapes(fixed.get('shapes') or [])
             except Exception as e:
                 await self.send_json({'type': 'error', 'message': f'cleanup failed: {e}'})
@@ -335,9 +338,10 @@ class LessonConsumer(AsyncWebsocketConsumer):
             current = new_shapes
             replaced = True
             await self.send_json({'type': 'replaceShapes', 'shapes': new_shapes, 'origin': origin})
-            issues = await self._resolve_issues(ids)
-            if not issues:
+            remaining, board = await self._gather_problems(ids)
+            if not remaining or len(remaining) > len(issues):
                 break
+            issues = remaining
         if not replaced:
             return
         await self._speak_canned(random.choice(DIGEST_LINES))
@@ -348,6 +352,22 @@ class LessonConsumer(AsyncWebsocketConsumer):
         for p in pending:
             p.cancel()
         await self.send_json({'type': 'digestDone'})
+
+    async def _gather_problems(self, ids):
+        """Everything wrong with the board right now: the deterministic
+        detector's enumerated classes PLUS a vision critic pass over the
+        rendered PNG — so failure modes nobody predicted still get caught.
+        Returns (problems, board_png) so the fixer can reuse the snapshot."""
+        det = await self._resolve_issues(ids)
+        board = await self._resolve_snapshot()
+        vis = []
+        if board:
+            try:
+                res = await asyncio.to_thread(critique_board, board, _key('OPENAI_API_KEY'))
+                vis = [p for p in (res.get('problems') or []) if isinstance(p, str) and p.strip()][:6]
+            except Exception:
+                pass  # the critic is a net, not a dependency — detector still stands
+        return det + vis, board
 
     async def _resolve_issues(self, ids):
         """Have the browser run the real detectIssues pass on this section."""

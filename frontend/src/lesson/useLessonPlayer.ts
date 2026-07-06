@@ -146,7 +146,9 @@ export function useLessonPlayer(
       for (const e of api.getSceneElements()) {
         const start =
           startFor.get(e.id) ??
-          ((e as any).containerId ? startFor.get((e as any).containerId) : undefined)
+          ((e as any).containerId ? startFor.get((e as any).containerId) : undefined) ??
+          // relocated arrow labels reveal with their arrow
+          ((e as any).customData?.labelOf ? startFor.get((e as any).customData.labelOf) : undefined)
         if (start === undefined || (e as any).opacity === 100) continue
         animsRef.current.set(e.id, start) // bound labels share their box's turn
         revealed.push(e)

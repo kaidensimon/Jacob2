@@ -1,0 +1,201 @@
+{
+ "zorder": [
+  {
+   "z": 0,
+   "id": "valid",
+   "type": "diamond",
+   "x": 375,
+   "y": 266,
+   "w": 174,
+   "h": 110,
+   "bg": "#fff3bf"
+  },
+  {
+   "z": 1,
+   "id": "credentials",
+   "type": "rectangle",
+   "x": 330,
+   "y": 146,
+   "w": 260,
+   "h": 70,
+   "bg": "#e7f5ff"
+  },
+  {
+   "z": 2,
+   "id": "error",
+   "type": "rectangle",
+   "x": 350,
+   "y": 436,
+   "w": 220,
+   "h": 70,
+   "bg": "#ffe3e3"
+  },
+  {
+   "z": 3,
+   "id": "welcome",
+   "type": "rectangle",
+   "x": 660,
+   "y": 286,
+   "w": 210,
+   "h": 70,
+   "bg": "#d3f9d8"
+  },
+  {
+   "z": 4,
+   "id": "start",
+   "type": "rectangle",
+   "x": 370,
+   "y": 40,
+   "w": 180,
+   "h": 60,
+   "bg": "#e7f5ff"
+  },
+  {
+   "z": 5,
+   "id": "a_start_credentials",
+   "type": "arrow",
+   "x": 460,
+   "y": 106,
+   "w": 0,
+   "h": 34,
+   "bg": "transparent"
+  },
+  {
+   "z": 6,
+   "id": "a_credentials_valid",
+   "type": "arrow",
+   "x": 461,
+   "y": 222,
+   "w": 1,
+   "h": 38,
+   "bg": "transparent"
+  },
+  {
+   "z": 7,
+   "id": "a_valid_welcome",
+   "type": "arrow",
+   "x": 555,
+   "y": 321,
+   "w": 99,
+   "h": 0,
+   "bg": "transparent"
+  },
+  {
+   "z": 8,
+   "id": "a_valid_error",
+   "type": "arrow",
+   "x": 461,
+   "y": 382,
+   "w": 1,
+   "h": 48,
+   "bg": "transparent"
+  },
+  {
+   "z": 9,
+   "id": "a_error_retry",
+   "type": "arrow",
+   "x": 344,
+   "y": 471,
+   "w": 44,
+   "h": 290,
+   "bg": "transparent"
+  },
+  {
+   "z": 10,
+   "id": "eBMAq7x5_6HjTiMPL04nh",
+   "type": "text",
+   "x": 435,
+   "y": 309,
+   "w": 53,
+   "h": 25,
+   "bg": "transparent",
+   "text": "Valid?",
+   "containerId": "valid"
+  },
+  {
+   "z": 11,
+   "id": "VV8JMbCSy5bn4RLuxVHR6",
+   "type": "text",
+   "x": 376,
+   "y": 169,
+   "w": 168,
+   "h": 25,
+   "bg": "transparent",
+   "text": "Enter credentials",
+   "containerId": "credentials"
+  },
+  {
+   "z": 12,
+   "id": "sEkPhLHpfHVXoXYk_Amd4",
+   "type": "text",
+   "x": 435,
+   "y": 459,
+   "w": 51,
+   "h": 25,
+   "bg": "transparent",
+   "text": "Error",
+   "containerId": "error"
+  },
+  {
+   "z": 13,
+   "id": "Hav67gf1CVKOKVeiuwys2",
+   "type": "text",
+   "x": 701,
+   "y": 309,
+   "w": 129,
+   "h": 25,
+   "bg": "transparent",
+   "text": "Welcome page",
+   "containerId": "welcome"
+  },
+  {
+   "z": 14,
+   "id": "R55YWs7IEMeBL4CSQqHCO",
+   "type": "text",
+   "x": 433,
+   "y": 58,
+   "w": 55,
+   "h": 25,
+   "bg": "transparent",
+   "text": "Start",
+   "containerId": "start"
+  },
+  {
+   "z": 15,
+   "id": "dCuQgyX7ygSxUPTC3hpIk",
+   "type": "text",
+   "x": 592,
+   "y": 311,
+   "w": 26,
+   "h": 20,
+   "bg": "transparent",
+   "text": "yes",
+   "containerId": "a_valid_welcome"
+  },
+  {
+   "z": 16,
+   "id": "PPzC1_jM7SP7kJo9Rk86P",
+   "type": "text",
+   "x": 452,
+   "y": 396,
+   "w": 18,
+   "h": 20,
+   "bg": "transparent",
+   "text": "no",
+   "containerId": "a_valid_error"
+  },
+  {
+   "z": 17,
+   "id": "rYarLq_S48l61uvFO9ZUc",
+   "type": "text",
+   "x": 245,
+   "y": 316,
+   "w": 110,
+   "h": 20,
+   "bg": "transparent",
+   "text": "Retry (max 3)",
+   "containerId": "a_error_retry"
+  }
+ ],
+ "issues": []
+}

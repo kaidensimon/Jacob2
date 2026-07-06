@@ -1,0 +1,6 @@
+[
+ "\"2. SYN-ACK\" overlaps \"1. SYN\" (the label of arrow synArrow)",
+ "\"3. ACK\" overlaps \"1. SYN\" (the label of arrow synArrow)",
+ "\"1. SYN\" (the label of arrow synArrow) is sitting on top of arrow/line synAckArrow",
+ "\"1. SYN\" (the label of arrow synArrow) is sitting on top of arrow/line ackArrow"
+]

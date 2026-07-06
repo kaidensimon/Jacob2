@@ -163,23 +163,67 @@ def answer_utterance(topic: str, question: str, prior_sections: list, api_key: s
 FIX_SYSTEM = r"""You clean up ONE section of a whiteboard lesson diagram that has readability problems. You get the section's shapes (the same format they were planned in) and a list of DETECTED issues (overlaps, text overflowing its box, cramped spacing, things poking outside the region).
 
 Return the FULL corrected shape list. You decide where things move — spread shapes out, widen boxes that clip their text, nudge labels clear of other shapes. Rules:
-- Keep every shape's id, type and meaning. Don't delete or add shapes; don't rewrite teaching content (only reposition/resize; tweak fontSize only if that's what's broken).
+- Keep every shape's id, type and meaning. Don't delete or add shapes; don't rewrite teaching content (only reposition/resize; tweak fontSize only if that's what's broken). ONE exception: an arrow/line that points at nothing, dangles into empty space, or duplicates another connector may be DELETED outright (omit it from the list) — never shrink it into a speck instead.
 - Keep the layout inside roughly (0,0) to (960,640) with generous whitespace (~40-60px between things). x right, y down, x/y is each shape's top-left.
 - Arrows with fromId/toId route between their shapes automatically, and an arrow's `text` label renders at the arrow's MIDPOINT. If an arrow's label collides with something, you MAY: move the other element clear of the arrow's midpoint, move the shapes the arrow connects (which moves the midpoint), shorten the arrow's `text`, or delete the arrow's `text` entirely when the meaning is already conveyed elsewhere. Otherwise return arrows unchanged.
 - Standalone text must sit in clear whitespace — never crossing a shape border or lying on an arrow's path.
 - Multi-line text uses REAL newlines in the JSON string, never the two characters backslash-n.
+- The result must look FINISHED and deliberate, not just collision-free: keep rows/columns aligned on shared x/y lines, keep spacing even, keep related things grouped and the layout balanced inside the region. When you move something, move it to a TIDY position aligned with its neighbours — never to a random empty spot. If a snapshot of the board is attached, use it to judge what actually looks off.
 Respond ONLY with JSON: {"shapes": [ <the full corrected list> ]}"""
 
 
-def fix_section(shapes: list, issues: list, api_key: str, model: str = None) -> dict:
-    """One-shot cleanup call: detected issues in, corrected shape list out."""
+def fix_section(shapes: list, issues: list, api_key: str, model: str = None,
+                board_image=None) -> dict:
+    """One cleanup round: detected issues (plus, optionally, a PNG of the board
+    as currently rendered — so the fixer can SEE the layout) in, corrected
+    shape list out."""
     model = model or get_model_name({})
     user = (
         "Section shapes:\n" + json.dumps(shapes) +
         "\n\nDetected issues:\n" + '\n'.join(f'- {i}' for i in issues) +
         "\n\nReturn the corrected full shape list."
     )
+    if board_image:
+        content = [
+            {'type': 'text', 'text': "A snapshot of the board AS CURRENTLY RENDERED is attached — "
+                                     "use it to judge what looks off.\n\n" + user},
+            {'type': 'image_url', 'image_url': {'url': board_image}},
+        ]
+        messages = [{'role': 'system', 'content': FIX_SYSTEM},
+                    {'role': 'user', 'content': content}]
+        return _complete_messages(messages, api_key, model, max_tokens=6000)
     return _complete(FIX_SYSTEM, user, api_key, model, max_tokens=6000)
+
+
+# ─── Universal visual critic (vision QA gate) ─────────────────────────────────
+# The deterministic detector only knows enumerated failure classes. This critic
+# looks at the RENDERED board and reports anything that visibly looks broken —
+# so failure modes nobody predicted still get caught and fed to the fix loop.
+
+CRITIQUE_SYSTEM = """You are a strict visual QA gate for auto-generated whiteboard diagrams. You get a PNG of a board. Report ONLY objective visual DEFECTS — things a reasonable viewer would call broken:
+- text overlapping other text or shapes; text clipped / cut off / spilling out of a shape
+- shapes colliding where it looks accidental (not deliberate nesting or a Venn diagram)
+- arrows striking through shapes or words, or pointing at nothing / dangling into empty space
+- stray fragments, orphaned elements, or a layout that is clearly misaligned where alignment was obviously intended
+- anything half-drawn or cut off at the edge
+
+Do NOT report: hand-drawn stroke wobble (intentional style), color choices, font taste, pedagogy/content quality, whitespace that simply exists, or minor imperfections in a readable, tidy board. If the board is readable and looks deliberate, return NO problems. NEVER invent a problem — when unsure, omit it.
+
+Each problem must be ONE short sentence naming the visible text/element involved so a fixer can locate it.
+Respond ONLY with JSON: {"problems": ["<defect>", ...]} — an empty list if the board passes."""
+
+
+def critique_board(board_image: str, api_key: str, model: str = None) -> dict:
+    """One vision QA pass over a rendered board PNG. Returns {problems: [...]}."""
+    model = model or get_model_name({})
+    messages = [
+        {'role': 'system', 'content': CRITIQUE_SYSTEM},
+        {'role': 'user', 'content': [
+            {'type': 'text', 'text': 'QA this whiteboard diagram.'},
+            {'type': 'image_url', 'image_url': {'url': board_image}},
+        ]},
+    ]
+    return _complete_messages(messages, api_key, model, max_tokens=800)
 
 
 # ─── Mid-lesson sidebar (fresh-context elaboration agent) ─────────────────────
