@@ -1,0 +1,8 @@
+[
+ "\"Softmax turns scores into we\" overlaps \"thick = high attention\"",
+ "\"Weighted mix new meaning for\" overlaps \"thin = low attention\"",
+ "\"Value meaning B\" overlaps \"thin = low attention\"",
+ "\"scores\" overlaps \"thick = high attention\"",
+ "\"thick = high attention\" is sitting on top of arrow/line arrow_scores_softmax",
+ "arrow/line arrow_v1_out passes through softmax"
+]

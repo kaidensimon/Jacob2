@@ -100,6 +100,15 @@ export type AgentAction =
       time?: number
     }
   | { _type: 'review'; text?: string; complete?: boolean; time?: number }
+  // The agent ran out of room: grow its own clear drawing area / field of view.
+  // Existing shapes keep their coordinates; it just gains more empty canvas.
+  | {
+      _type: 'expandView'
+      direction?: 'right' | 'down' | 'both'
+      amount?: number
+      complete?: boolean
+      time?: number
+    }
   // Tool: render a real 2D/3D plot of these expressions and feed the image back
   // as a drawing reference (so the agent traces the correct shape).
   | {

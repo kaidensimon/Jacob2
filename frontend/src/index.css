@@ -1,5 +1,42 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 @import url('tldraw/tldraw.css');
+
+/* ===================== Design tokens — clean & minimal ===================== */
+/* One accent color, neutral grays, flat white surfaces. The old liquid-glass
+   token names are kept so component styles keep working. */
+:root {
+  /* Accent */
+  --lg-accent: #4f46e5;
+  --lg-accent-strong: #4338ca;
+  --lg-accent-2: #4f46e5;
+  --lg-accent-3: #4f46e5;
+  --lg-gradient: linear-gradient(#4f46e5, #4f46e5); /* flat — kept for compat */
+  --lg-gradient-soft: linear-gradient(#4f46e5, #4f46e5);
+
+  /* Ink / text */
+  --lg-ink: #18181b;
+  --lg-ink-soft: #52525b;
+  --lg-ink-faint: #a1a1aa;
+
+  /* Surfaces */
+  --lg-glass: #ffffff;
+  --lg-glass-strong: #ffffff;
+  --lg-glass-thin: #ffffff;
+  --lg-glass-border: #e4e4e7;
+  --lg-hairline: #ececef;
+
+  /* Depth — subtle, single-layer */
+  --lg-shadow: 0 1px 3px rgba(0, 0, 0, 0.07);
+  --lg-shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.09);
+  --lg-shadow-accent: 0 1px 3px rgba(0, 0, 0, 0.12);
+  --lg-inner-hi: inset 0 0 0 0 transparent;
+
+  --lg-radius: 12px;
+  --lg-radius-sm: 8px;
+  --lg-blur: none;
+  --lg-blur-strong: none;
+  --lg-ease: ease-out;
+}
 
 *, *::before, *::after {
   box-sizing: border-box;
@@ -9,8 +46,14 @@ body {
   margin: 0;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
-  background: #f5f5f5;
+  color: var(--lg-ink);
+  background: #fafafa;
   overscroll-behavior: none;
+}
+
+/* Formerly an animated aurora backdrop — now just a plain quiet background. */
+.lg-aurora {
+  background: #fafafa;
 }
 
 #root {
@@ -21,14 +64,75 @@ body {
 .spinner {
   width: 36px;
   height: 36px;
-  border: 3px solid #e0e0ea;
-  border-top-color: #6c47ff;
+  border: 3px solid #e4e4e7;
+  border-top-color: var(--lg-accent);
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
 }
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+/* ===================== Jacob sprite (drawing companion) ===================== */
+
+.jacob-sprite {
+  position: absolute;
+  animation: jacob-walk-in 0.9s ease-out both;
+  will-change: transform;
+}
+.jacob-sprite-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  transform-origin: 50% 92%;
+  animation: jacob-scribble 0.5s ease-in-out infinite alternate;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.22));
+}
+/* Waddle in from the right, little hop on each "step" */
+@keyframes jacob-walk-in {
+  0%   { transform: translateX(150px) translateY(0);   opacity: 0; }
+  20%  { transform: translateX(112px) translateY(-8px); opacity: 1; }
+  40%  { transform: translateX(75px)  translateY(0); }
+  60%  { transform: translateX(38px)  translateY(-8px); }
+  80%  { transform: translateX(10px)  translateY(0); }
+  100% { transform: translateX(0)     translateY(0); }
+}
+/* Busy pencil wiggle while the agent draws */
+@keyframes jacob-scribble {
+  from { transform: rotate(-2.5deg) translateY(0); }
+  to   { transform: rotate(3deg)    translateY(-2px); }
+}
+.jacob-sprite-leave {
+  animation: jacob-walk-out 0.5s ease-in both;
+}
+@keyframes jacob-walk-out {
+  0%   { transform: translateX(0) translateY(0);       opacity: 1; }
+  50%  { transform: translateX(60px) translateY(-6px); opacity: 1; }
+  100% { transform: translateX(130px) translateY(0);   opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .jacob-sprite, .jacob-sprite-img, .jacob-sprite-leave { animation: none; }
+}
+
+/* Voice-tutor Jacob: stands bottom-left, mouth animates while he talks */
+.jacob-talking {
+  position: absolute;
+  left: 16px;
+  bottom: 64px; /* clear of the zoom controls */
+  z-index: 5;
+  pointer-events: none;
+  animation: jacob-pop-in 0.4s ease-out both;
+}
+.jacob-talking img {
+  width: 118px;
+  height: 118px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.22));
+}
+@keyframes jacob-pop-in {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: none; }
 }
 
 /* ===================== Excalidraw + AI Assistant Layout ===================== */
@@ -59,6 +163,21 @@ body {
     grid-template-rows: 1fr 45vh;
   }
 }
+
+/* ===================== Excalidraw chrome — light touch ===================== */
+/* Scoped to light theme so the built-in dark-mode toggle keeps its own look. */
+.ex-canvas .excalidraw:not(.theme--dark) {
+  --button-hover-bg: rgba(79, 70, 229, 0.08);
+  --button-selected-bg: rgba(79, 70, 229, 0.12);
+  --button-selected-hover-bg: rgba(79, 70, 229, 0.18);
+}
+
+.ex-canvas .excalidraw:not(.theme--dark) .Island {
+  border: 1px solid var(--lg-glass-border);
+  box-shadow: var(--lg-shadow);
+  border-radius: 10px;
+}
+
 
 /* ===================== tldraw Agent Layout (legacy, unused) ===================== */
 

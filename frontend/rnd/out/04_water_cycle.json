@@ -1,0 +1,124 @@
+{
+  "label": "04_water_cycle",
+  "prompt": "Draw a clear labeled diagram of the water cycle: evaporation from the ocean, condensation into clouds, precipitation as rain, and runoff back to the ocean, arranged as a cycle with labeled arrows.",
+  "elapsed": "35",
+  "issues": [],
+  "chat": [
+    {
+      "kind": "user",
+      "text": "Draw a clear labeled diagram of the water cycle: evaporation from the ocean, condensation into clouds, precipitation as rain, and runoff back to the ocean, arranged as a cycle with labeled arrows."
+    },
+    {
+      "kind": "think",
+      "text": "I'll create a simple circular water-cycle diagram with four main labeled stages and arrows connecting them, keeping the ocean/land/clouds readable and uncluttered."
+    },
+    {
+      "kind": "action",
+      "text": "Drew text “Water Cycle”"
+    },
+    {
+      "kind": "action",
+      "text": "Drew rectangle “Ocean”"
+    },
+    {
+      "kind": "action",
+      "text": "Drew ellipse “Sun”"
+    },
+    {
+      "kind": "action",
+      "text": "Drew ellipse “Clouds”"
+    },
+    {
+      "kind": "action",
+      "text": "Drew ellipse “Condensation”"
+    },
+    {
+      "kind": "action",
+      "text": "Drew rectangle “Land”"
+    },
+    {
+      "kind": "action",
+      "text": "Drew text “Precipitation”"
+    },
+    {
+      "kind": "action",
+      "text": "Drew text “Evaporation”"
+    },
+    {
+      "kind": "action",
+      "text": "Drew text “Runoff”"
+    },
+    {
+      "kind": "action",
+      "text": "Arrow ocean → cloud1"
+    },
+    {
+      "kind": "action",
+      "text": "Arrow cloud1 → cloud2"
+    },
+    {
+      "kind": "action",
+      "text": "Arrow cloud2 → land"
+    },
+    {
+      "kind": "action",
+      "text": "Arrow land → ocean"
+    },
+    {
+      "kind": "action",
+      "text": "Arrow sun → ocean"
+    },
+    {
+      "kind": "message",
+      "text": "This diagram shows the water cycle as a loop: sunlight heats ocean water, evaporation carries water vapor upward, condensation forms clouds, precipitation falls as rain over land, and runoff returns water back to the ocean."
+    },
+    {
+      "kind": "think",
+      "text": "Diagnosing and fixing 3 readability issues…"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 1: The standalone Evaporation label at (180,420) sits in the path of the diagonal orange heat arrow/label area. It is a label placed into the figure rather than in nearby clear space. The right operation is move. A clear spot near the rising water-vapor arrow and ocean is around (95,390), left of the blue vapor arrow and below the sun, not on the heat arrow or ocean."
+    },
+    {
+      "kind": "action",
+      "text": "Moved evapLabel"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 2: The Clouds ellipse overlaps the cooling arrow text because the condensation arrow label runs through the cloud cluster. Since only cloud1 can be moved, move it slightly left/up within the cloud cluster so its label clears the cooling text while still reading as part of the clouds. Target (315,125) keeps it near condensation and avoids the cooling text at about y=180."
+    },
+    {
+      "kind": "action",
+      "text": "Moved cloud1"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 3: The Condensation cloud also overlaps the cooling arrow label, and its own text is cramped. Since only cloud2 can be moved, shift it a little right/up so the cooling label no longer sits across the cloud text while keeping it near the cloud cluster and rain arrow. Target (500,115) stays clear of the Clouds ellipse text and leaves space under the clouds."
+    },
+    {
+      "kind": "action",
+      "text": "Moved cloud2"
+    },
+    {
+      "kind": "message",
+      "text": "This water cycle diagram shows heat from the Sun driving evaporation from the Ocean. Water vapor rises, cools and condenses into Clouds, falls as precipitation over Land, then runoff flows back to the Ocean, completing the cycle."
+    },
+    {
+      "kind": "think",
+      "text": "Diagnosing and fixing 1 readability issue…"
+    },
+    {
+      "kind": "think",
+      "text": "The overlap is caused by the condensation cloud sitting too close to the small 'cooling' arrow label between the two cloud shapes. Since the problem allows moving only cloud2, I should move that cloud slightly to the right into open space, keeping it near the clouds/condensation stage and clear of the precipitation label and rain arrow."
+    },
+    {
+      "kind": "action",
+      "text": "Moved cloud2"
+    },
+    {
+      "kind": "message",
+      "text": "This water cycle diagram shows the repeating path of water: the sun heats the ocean, water evaporates upward as vapor, vapor cools and condenses into clouds, rain falls as precipitation onto land, and runoff flows back toward the ocean to continue the cycle."
+    }
+  ]
+}

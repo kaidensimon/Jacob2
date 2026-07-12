@@ -1,0 +1,10 @@
+[
+ "\"How attention decides what m\" overlaps \"Candidate key tokens\"",
+ "\"Softmax turns scores into we\" overlaps \"thick = high attention\" (the label of arrow arrow_v1_out)",
+ "\"Value meaning B\" overlaps \"thick = high attention\" (the label of arrow arrow_v1_out)",
+ "\"Value meaning B\" overlaps \"thin = low attention\" (the label of arrow arrow_v2_out)",
+ "\"Softmax turns scores into we\" is sitting on top of arrow/line arrow_v1_out",
+ "\"Value meaning A\" is sitting on top of arrow/line arrow_v1_out",
+ "arrow/line arrow_v1_out passes through softmax",
+ "arrow/line arrow_v1_out passes through value2"
+]

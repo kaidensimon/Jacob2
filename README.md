@@ -1,4 +1,9 @@
 # Jacob V2
+TODO: 
+* MAKE IT SO THE FIRST MESSAGE IS RESPONDING TO THE REQUEST. NOT FILLER
+* MAKE IT SO THAT WHEN THE LESSON IS OVER, THE AGENT LETS THE USER KNOW ("THAT CONCLUDES THE LESSON") OR SUM LIKE THAT
+* MAKE SURE IT USES ANALAGIES
+
 
 An AI-powered visualization studio. Describe a concept in plain language and the app decides the best way to show it: a clean **whiteboard diagram**, an **animated Manim video**, or an **interactive 2D/3D graph**, then builds it for you in real time.
 
@@ -24,6 +29,18 @@ Highlights:
 - **Accurate graphing tools**: curves, surfaces, and regions of integration are plotted deterministically so the agent traces correct geometry instead of free-handing it.
 - **Independent agent "camera"**: the agent has its own viewport and can pan/zoom to review and refine its work.
 - **Accounts + dashboard**: JWT auth, saved whiteboards, and a gallery of generated animations.
+
+---
+
+## Voice lesson demo
+
+Turn on **Voice Tutor Mode** and ask Jacob to teach you something — he plans a
+multi-section lesson and draws it on the whiteboard while narrating, in sync,
+with a live talking sprite.
+
+[![Watch the voice lesson demo](https://img.youtube.com/vi/JC6m4VCns-0/hqdefault.jpg)](https://www.youtube.com/watch?v=JC6m4VCns-0)
+
+[Watch the voice lesson demo](https://www.youtube.com/watch?v=JC6m4VCns-0)
 
 ---
 

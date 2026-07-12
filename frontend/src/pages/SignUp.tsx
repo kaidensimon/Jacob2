@@ -43,7 +43,7 @@ export default function SignUp() {
   };
 
   return (
-    <div className={styles.container}>
+    <div className={`${styles.container} lg-aurora`}>
       <div className={styles.card}>
         <h1 className={styles.title}>Sign Up</h1>
         <p className={styles.subtitle}>Create your account</p>

@@ -1,0 +1,249 @@
+{
+  "label": "05_web_arch",
+  "prompt": "Draw a system architecture diagram of a web application: a client/browser, a load balancer, three application servers, a database, and a Redis cache. Connect them with labeled arrows showing the request flow.",
+  "elapsed": "50",
+  "issues": [
+    {
+      "rank": 1000,
+      "desc": "\"Client / Browser\" overlaps \"HTTPS request\"",
+      "moveId": "client",
+      "moveBox": {
+        "x": 3439,
+        "y": 265,
+        "w": 170,
+        "h": 80
+      }
+    },
+    {
+      "rank": 1000,
+      "desc": "\"Load Balanc er\" overlaps \"HTTPS request\"",
+      "moveId": "lb",
+      "moveBox": {
+        "x": 3699,
+        "y": 240,
+        "w": 150,
+        "h": 170
+      }
+    },
+    {
+      "rank": 1000,
+      "desc": "\"App Server 2\" overlaps \"read / write\"",
+      "moveId": "app2",
+      "moveBox": {
+        "x": 3999,
+        "y": 325,
+        "w": 190,
+        "h": 70
+      }
+    },
+    {
+      "rank": 1000,
+      "desc": "\"route request\" overlaps \"route request\"",
+      "moveId": "ExSR_6QKzxtx_SqhaMNyn",
+      "moveBox": {
+        "x": 3857.010040283203,
+        "y": 310.3125,
+        "w": 133.97991943359375,
+        "h": 25
+      }
+    }
+  ],
+  "chat": [
+    {
+      "kind": "user",
+      "text": "Draw a system architecture diagram of a web application: a client/browser, a load balancer, three application servers, a database, and a Redis cache. Connect them with labeled arrows showing the request flow."
+    },
+    {
+      "kind": "think",
+      "text": "I'll create a clean left-to-right architecture diagram: client, load balancer, three stacked app servers, then database and Redis on the right, with short labeled arrows for the main request and data/cache flows."
+    },
+    {
+      "kind": "action",
+      "text": "Drew text “Web Application Architecture”"
+    },
+    {
+      "kind": "action",
+      "text": "Drew rectangle “Client / Browser”"
+    },
+    {
+      "kind": "action",
+      "text": "Drew diamond “Load Balancer”"
+    },
+    {
+      "kind": "action",
+      "text": "Drew rectangle “App Server 1”"
+    },
+    {
+      "kind": "action",
+      "text": "Drew rectangle “App Server 2”"
+    },
+    {
+      "kind": "action",
+      "text": "Drew rectangle “App Server 3”"
+    },
+    {
+      "kind": "action",
+      "text": "Drew ellipse “Database”"
+    },
+    {
+      "kind": "action",
+      "text": "Drew rectangle “Redis Cache”"
+    },
+    {
+      "kind": "action",
+      "text": "Arrow client → lb"
+    },
+    {
+      "kind": "action",
+      "text": "Arrow lb → app1"
+    },
+    {
+      "kind": "action",
+      "text": "Arrow lb → app2"
+    },
+    {
+      "kind": "action",
+      "text": "Arrow lb → app3"
+    },
+    {
+      "kind": "action",
+      "text": "Arrow app2 → db"
+    },
+    {
+      "kind": "action",
+      "text": "Arrow app2 → redis"
+    },
+    {
+      "kind": "action",
+      "text": "Drew text “Any app server can handle a request and talk to shared data services.”"
+    },
+    {
+      "kind": "message",
+      "text": "This diagram shows requests entering from the browser, being distributed by the load balancer across three application servers, then each app server using the database for persistent data and Redis for fast cached reads/writes."
+    },
+    {
+      "kind": "think",
+      "text": "Diagnosing and fixing 7 readability issues…"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 1: The HTTPS request arrow/label sits too close to the client box edge, so the client container overlaps the arrow label. Since only `client` can be touched, the right operation is a small move left/up within empty space, keeping it aligned with the flow and clear of the arrow label."
+    },
+    {
+      "kind": "action",
+      "text": "Moved client"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 2: The HTTPS request label is also too close to the load balancer diamond. The root cause is the diamond sitting near the arrow label; since only `lb` can be touched, move it slightly right/down into the open gap before the app servers while preserving the left-to-right flow."
+    },
+    {
+      "kind": "action",
+      "text": "Moved lb"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 3: The load balancer overlaps the route-request labels because the labels are placed along the outgoing arrows very near the diamond. Since only `lb` can be touched, the same right/down move gives the diamond more separation from the label cluster without affecting other elements."
+    },
+    {
+      "kind": "action",
+      "text": "Moved lb"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 4: App Server 1 overlaps a route-request label because the upper app box is too close to the outgoing arrow label. Since only `app1` can be moved, shift it slightly right and up into empty space, keeping the app-server column structure and leaving the label space clear."
+    },
+    {
+      "kind": "action",
+      "text": "Moved app1"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 5: App Server 2 overlaps a route-request label because the middle app box starts where the middle route label/arrow text ends. The correct fix is moving `app2` slightly right, keeping it centered in the stack and clear of the label."
+    },
+    {
+      "kind": "action",
+      "text": "Moved app2"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 6: The duplicate App Server 2 overlap has the same root cause: route label crowding near the app column. The prior move to the right is the minimum safe repair, so keep `app2` at the clear target position."
+    },
+    {
+      "kind": "action",
+      "text": "Moved app2"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 7: Two route-request labels overlap each other because one label is too high/close to the others. Only `Fg_xaEf-9s5dcZrqJQ6A4` can be moved, so place that label in the open space above the outgoing arrows between the load balancer and App Server 1, away from the other route labels."
+    },
+    {
+      "kind": "message",
+      "text": "This architecture shows browser traffic entering through the load balancer, which distributes requests to one of three app servers. The app tier then uses shared backing services: the database for persistent reads/writes and Redis for fast cache get/set operations."
+    },
+    {
+      "kind": "think",
+      "text": "Diagnosing and fixing 4 readability issues…"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 1: The load balancer diamond is tall and its center label sits near the green route-request arrows; the arrows/labels pass close to the right edge of the diamond. Since I am only allowed to act on `lb`, the safest repair is to move the load balancer slightly left/up into the empty gap between the client and app tier, keeping it between them while clearing the route labels. Target around x=285,y=205 stays clear of the client at x=25..195 and the app arrows/servers to the right."
+    },
+    {
+      "kind": "action",
+      "text": "Moved lb"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 2 is the same load-balancer overlap with another route label. The same move of `lb` to x=285,y=205 resolves both without changing working arrows or adding clutter; no further action on `lb` is needed."
+    },
+    {
+      "kind": "think",
+      "text": "Problem 3: App Server 2 overlaps a route-request label because the middle server box begins at x=585,y=240 while the label/arrow sits just to its left and partly on its left edge. I can only move `app2`; shifting it a bit right creates a clearer gap between the route label and the box while keeping it aligned with the app tier and still near database/cache arrows. Target x=620,y=240 clears the route text and remains well left of database/cache."
+    },
+    {
+      "kind": "action",
+      "text": "Moved app2"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 4: App Server 2 also overlaps the read/write arrow label near the space between the app server and database. Moving `app2` right would make that worse; the better target is to keep `app2` lower/right enough to clear the route label but not intrude too far into the data-service label area. x=620,y=240 leaves its right edge at 810, still short of the read/write arrow region ending near x=864, and keeps the label mostly in the open gap. No extra shapes are needed."
+    },
+    {
+      "kind": "message",
+      "text": "This architecture shows a client/browser sending HTTPS requests to a load balancer, which routes traffic to one of three application servers. The app tier then communicates with shared backend services: the database for persistent reads/writes and Redis for fast cache get/set operations."
+    },
+    {
+      "kind": "think",
+      "text": "Diagnosing and fixing 4 readability issues…"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 1 diagnosis: the load balancer diamond's centered text overlaps the nearby green route-request arrow labels because the diamond sits too close to the outgoing arrow fan. The correct minimal operation is to move the lb shape slightly left/up into the clear gap between the client and app servers while keeping it connected conceptually and avoiding the client arrow label."
+    },
+    {
+      "kind": "action",
+      "text": "Moved lb"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 2 is the same root cause for another route-request label: moving the load balancer left/up gives the arrow labels more room to the right of the diamond, without changing the rest of the architecture."
+    },
+    {
+      "kind": "think",
+      "text": "Problem 3 diagnosis: App Server 2 is in the same horizontal band as a route-request label, so the label touches the server box. The right operation is to move only app2 slightly downward into the open lane between App Server 1 and App Server 3, leaving enough clearance from the database arrow label."
+    },
+    {
+      "kind": "action",
+      "text": "Moved app2"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 4 diagnosis: App Server 2 also crowds the read/write label above its right edge. Moving app2 down increases vertical clearance from the database arrow label while keeping it aligned with the app tier and clear of App Server 3."
+    },
+    {
+      "kind": "message",
+      "text": "This architecture shows a browser sending HTTPS traffic to a load balancer, which routes each request to one of three application servers. The app tier then talks to shared services: the database for persistent reads/writes and Redis for fast cache get/set operations."
+    }
+  ]
+}

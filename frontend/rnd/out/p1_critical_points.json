@@ -1,0 +1,382 @@
+{
+  "label": "p1_critical_points",
+  "prompt": "Solve this on the whiteboard, showing full work step by step: Find the local maximum, minimum, and saddle points of the function f(x,y) = xy - 2x - 2y - x^2 - y^2. Use the second derivative (Hessian) test.",
+  "elapsed": "85",
+  "issues": [
+    {
+      "rank": 1000,
+      "desc": "\"Critical point and Hessian c\" overlaps \"1) Start with the function\"",
+      "moveId": "title",
+      "moveBox": {
+        "x": 60,
+        "y": 18,
+        "w": 534.65966796875,
+        "h": 35
+      }
+    },
+    {
+      "rank": 1000,
+      "desc": "\"equation (-2,-2)\" overlaps \"Critical point\"",
+      "moveId": "crit_math",
+      "moveBox": {
+        "x": 630,
+        "y": 212,
+        "w": 93,
+        "h": 25
+      }
+    },
+    {
+      "rank": 1000,
+      "desc": "\"equation (-2,-2)\\text{ is a \" overlaps \"Classification\"",
+      "moveId": "answer_math",
+      "moveBox": {
+        "x": 570,
+        "y": 812,
+        "w": 311,
+        "h": 25
+      }
+    }
+  ],
+  "chat": [
+    {
+      "kind": "user",
+      "text": "Solve this on the whiteboard, showing full work step by step: Find the local maximum, minimum, and saddle points of the function f(x,y) = xy - 2x - 2y - x^2 - y^2. Use the second derivative (Hessian) test."
+    },
+    {
+      "kind": "think",
+      "text": "I'll create a clean vertical worked solution: function, first partials, solve the system, Hessian/second derivative test, and final classification."
+    },
+    {
+      "kind": "action",
+      "text": "Drew text “Critical point and Hessian classification”"
+    },
+    {
+      "kind": "action",
+      "text": "Drew text “1) Start with the function”"
+    },
+    {
+      "kind": "action",
+      "text": "Typeset an equation"
+    },
+    {
+      "kind": "action",
+      "text": "Drew text “2) Find first partial derivatives”"
+    },
+    {
+      "kind": "action",
+      "text": "Typeset an equation"
+    },
+    {
+      "kind": "action",
+      "text": "Drew text “3) Set them equal to zero”"
+    },
+    {
+      "kind": "action",
+      "text": "Typeset an equation"
+    },
+    {
+      "kind": "action",
+      "text": "Drew text “4) Solve the system”"
+    },
+    {
+      "kind": "action",
+      "text": "Typeset an equation"
+    },
+    {
+      "kind": "action",
+      "text": "Drew rectangle “Critical point”"
+    },
+    {
+      "kind": "action",
+      "text": "Typeset an equation"
+    },
+    {
+      "kind": "action",
+      "text": "Drew text “5) Second derivatives / Hessian”"
+    },
+    {
+      "kind": "action",
+      "text": "Typeset an equation"
+    },
+    {
+      "kind": "action",
+      "text": "Typeset an equation"
+    },
+    {
+      "kind": "action",
+      "text": "Drew text “6) Hessian determinant test”"
+    },
+    {
+      "kind": "action",
+      "text": "Typeset an equation"
+    },
+    {
+      "kind": "action",
+      "text": "Typeset an equation"
+    },
+    {
+      "kind": "action",
+      "text": "Drew rectangle “Classification”"
+    },
+    {
+      "kind": "action",
+      "text": "Typeset an equation"
+    },
+    {
+      "kind": "message",
+      "text": "This worked solution finds the only critical point by setting both first partial derivatives to zero, then uses the Hessian determinant. Since D > 0 and fxx < 0, the critical point (-2,-2) is classified as a local maximum."
+    },
+    {
+      "kind": "think",
+      "text": "Diagnosing and fixing 8 readability issues…"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 1: s1 is a step header above eq_f; the detector flags overlap because the handwritten text box is tall, but visually it is already above the equation with clear whitespace and belongs there. Moving it would disrupt the clean vertical step layout, so the minimum safe repair is to leave it."
+    },
+    {
+      "kind": "think",
+      "text": "Problem 2: s2 is also a step header placed above the partial-derivative math. The root cause is detector bounding-box sensitivity, not an actual readability collision. It is near its equation and has visible separation, so I should not move it."
+    },
+    {
+      "kind": "think",
+      "text": "Problem 3: s3 is the header for the system of equations. It sits above eq_system with enough visual gap; the detected overlap is not hurting readability. Minimum edit: leave it in place."
+    },
+    {
+      "kind": "think",
+      "text": "Problem 4: s4 labels the solve-system block and is positioned just above the aligned equations. It is visually clear and not on top of the math. No move is needed."
+    },
+    {
+      "kind": "think",
+      "text": "Problem 5: crit_math is intentionally inside the Critical point box, but it is very close to the container label text. The right operation is a small move downward within the same box, keeping it centered and not touching the label or box border."
+    },
+    {
+      "kind": "action",
+      "text": "Moved crit_math"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 6: s5 is the section header above the second-derivative equations in the right column. It is visually separated from eq_second; moving it would make spacing worse. Leave it."
+    },
+    {
+      "kind": "think",
+      "text": "Problem 7: s6 is the header above the determinant formula. It has clear whitespace above the math, so this is another harmless bounding-box flag. Leave it."
+    },
+    {
+      "kind": "think",
+      "text": "Problem 8: answer_math is intentionally inside the Classification box, but it sits close to the centered word label. Move it slightly downward within the red box so the title and conclusion read as two distinct lines."
+    },
+    {
+      "kind": "action",
+      "text": "Moved answer_math"
+    },
+    {
+      "kind": "message",
+      "text": "The visual walks through the Hessian test: first it finds the stationary point by solving f_x=0 and f_y=0, giving (-2,-2). Then it computes the Hessian determinant D=3>0 and notes f_xx=-2<0, so the critical point is classified as a local maximum."
+    },
+    {
+      "kind": "think",
+      "text": "Diagnosing and fixing 8 readability issues…"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 1 diagnosis: s1 is a step header placed close above its equation; the overlap flag is from tight vertical spacing, but visually it belongs just above eq_f. The correct minimal repair is to move the header slightly upward into the empty band below the title, keeping it near the function and away from the equation box."
+    },
+    {
+      "kind": "action",
+      "text": "Moved s1"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 2 diagnosis: s2 is similarly a header placed too close to the partial-derivative math. There is empty space between the first equation and this header; move the header upward a bit so it remains attached to step 2 but no longer touches the rendered equation."
+    },
+    {
+      "kind": "action",
+      "text": "Moved s2"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 3 diagnosis: s3 is a header directly above a taller rendered aligned equation. The left column has adequate space above this step; move s3 upward slightly into clear space while keeping it visually tied to the system equations."
+    },
+    {
+      "kind": "action",
+      "text": "Moved s3"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 4 diagnosis: s4 is a header too close to the solve-system aligned math, which renders tall. Move only the header upward into the available whitespace above the solve block; do not move the equations because the column is otherwise readable."
+    },
+    {
+      "kind": "action",
+      "text": "Moved s4"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 5 diagnosis: crit_math is intentionally inside the Critical point container, but it overlaps the box label text area. Since the math should stay in the container, move it lower and centered within the empty lower half of the box rather than outside or onto the label."
+    },
+    {
+      "kind": "action",
+      "text": "Moved crit_math"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 6 diagnosis: s5 is a header above the second-derivative math and is too close vertically. Move the header slightly upward into clear space between the critical point box and the equations, preserving the right-column structure."
+    },
+    {
+      "kind": "action",
+      "text": "Moved s5"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 7 diagnosis: s6 is a header placed too near the determinant equation. There is empty space above it after the Hessian matrix; move the header upward modestly so the heading clears the math below without disturbing the equations."
+    },
+    {
+      "kind": "action",
+      "text": "Moved s6"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 8 diagnosis: answer_math is intentionally inside the Classification box but is too low/close to the bottom and flagged against the box label. The right operation is to move the math to the clear lower-middle of the container, below the label and with padding from the border."
+    },
+    {
+      "kind": "action",
+      "text": "Moved answer_math"
+    },
+    {
+      "kind": "message",
+      "text": "The work shows the full Hessian test: first solve f_x=0 and f_y=0 to get the only critical point (-2,-2). Then the Hessian has determinant D=3>0 and f_xx=-2<0, so the point is classified as a local maximum."
+    },
+    {
+      "kind": "think",
+      "text": "Diagnosing and fixing 4 readability issues…"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 1 diagnosis: the title is a standalone header near the top; the detector sees its bounding box close to step 1, but visually the title and step header are already separated and readable. Moving it would risk detaching the title from the page. The right operation is no edit."
+    },
+    {
+      "kind": "think",
+      "text": "Problem 2 diagnosis: the function equation sits between step 1 and step 2 with clear visual spacing; the auto box is taller than its rendered math, causing a false overlap with the next header. Moving it would disrupt the step-by-step column. The right operation is no edit."
+    },
+    {
+      "kind": "think",
+      "text": "Problem 3 diagnosis: the critical point formula is intentionally inside the green Critical point box, but it is too close to the centered text label, so the two labels visually collide. Since only crit_math can be moved, I will move the formula slightly lower within the same box, leaving it in empty space below the label and still contained in the critical point panel."
+    },
+    {
+      "kind": "action",
+      "text": "Moved crit_math"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 4 diagnosis: the final answer formula is intentionally inside the red Classification box, but it collides with the centered box label. Since only answer_math can be moved, I will move the formula lower within the same box, keeping it clear of the label and still inside the answer panel."
+    },
+    {
+      "kind": "action",
+      "text": "Moved answer_math"
+    },
+    {
+      "kind": "message",
+      "text": "This work finds the only critical point by setting both first partial derivatives equal to zero, giving (-2,-2). The Hessian has determinant D=3>0 and fxx=-2<0, so the second-derivative test classifies that critical point as a local maximum."
+    },
+    {
+      "kind": "think",
+      "text": "Diagnosing and fixing 4 readability issues…"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 1 diagnosis: the title text box is tall enough that its lower bounding box touches the first step header at y=90. This is a title/header spacing issue, not a need to redesign. The correct operation is a small move upward into empty top margin while keeping it as the main heading. Target y=18 keeps it above step 1 and inside the viewport without landing on another shape."
+    },
+    {
+      "kind": "action",
+      "text": "Moved title"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 2 diagnosis: the first function equation renders with a bounding box that reaches close to the step 2 header below; the column spacing between step 1 equation and step 2 header is too tight. The correct operation is a small move upward for eq_f, keeping it under step 1 but giving more clearance before step 2. Target y=130 leaves it below s1 and clear of s2."
+    },
+    {
+      "kind": "action",
+      "text": "Moved eq_f"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 3 diagnosis: crit_math is intentionally inside the green Critical point box, but the detector flags containment/label overlap. It should remain in that box; the issue is the math sits too close to the label. The right operation is a small move downward within the same rectangle, to empty lower space. Target y=202 keeps it inside the box and clear of the centered label."
+    },
+    {
+      "kind": "action",
+      "text": "Moved crit_math"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 4 diagnosis: answer_math is intentionally inside the red Classification box, but it overlaps the box label vertically. It should stay in the classification container; the right operation is a small move downward within the same box so the label and conclusion read as two separate lines. Target y=800 keeps it inside the box and clear of the word Classification."
+    },
+    {
+      "kind": "action",
+      "text": "Moved answer_math"
+    },
+    {
+      "kind": "message",
+      "text": "The work shows the full Hessian test: first set the gradient equal to zero to get the only critical point, (-2,-2). Then the Hessian has determinant D=3>0 and fxx=-2<0, so the quadratic surface is concave down there. Therefore (-2,-2) is a local maximum."
+    },
+    {
+      "kind": "think",
+      "text": "Diagnosing and fixing 3 readability issues…"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 1: the step header s1 is flagged against the function equation, but from the coordinates s1 is above eq_f with a large vertical gap and visually they read as a normal header-plus-equation pair. Moving the header away would reduce clarity and is likely a false positive from text bounds. Minimum safe repair: leave s1 in place."
+    },
+    {
+      "kind": "think",
+      "text": "Problem 2: crit_math is intentionally inside the Critical point container, but the container already has centered text plus math; the math sits close to the label and is detected as overlapping the rectangle. The right operation is a small move within the empty lower portion of the box so it remains inside the container while separating from the label."
+    },
+    {
+      "kind": "action",
+      "text": "Moved crit_math"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 3: answer_math is intentionally inside the Classification box, but it sits close to the box label. The right operation is a small move lower within the empty bottom portion of the box, keeping the equation inside the classification container without touching the label or border."
+    },
+    {
+      "kind": "action",
+      "text": "Moved answer_math"
+    },
+    {
+      "kind": "message",
+      "text": "The work shows the full Hessian test: first set the gradient equal to zero to find the only critical point, (-2,-2). Then the Hessian has determinant D=3>0 and fxx=-2<0, so the function is concave down there. Therefore (-2,-2) is a local maximum."
+    },
+    {
+      "kind": "think",
+      "text": "Diagnosing and fixing 3 readability issues…"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 1 diagnosis: the step header and the formula are near each other, but the detected boxes touch because the header is too close above the math image. This is not a column-wide spacing failure; only this header needs a small move upward into the empty space under the title. Operation: move s1 to an empty spot near the formula, checking it remains below the title and above the equation."
+    },
+    {
+      "kind": "action",
+      "text": "Moved s1"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 2 diagnosis: crit_math is intentionally inside the critical-point box, but it overlaps the box's internal text label because both are centered too close vertically. The math value should remain inside the same green box but lower, in clear space below the label. Operation: move crit_math slightly downward within the rectangle without touching the box edge or other shapes."
+    },
+    {
+      "kind": "action",
+      "text": "Moved crit_math"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 3 diagnosis: answer_math is intentionally inside the classification box, but the formula overlaps the box label. It should remain inside the red answer box, below the label with enough vertical separation. Operation: move answer_math slightly downward within the rectangle, staying clear of the bottom edge."
+    },
+    {
+      "kind": "action",
+      "text": "Moved answer_math"
+    },
+    {
+      "kind": "message",
+      "text": "The visual works through the Hessian test step by step: first it finds the gradient equations, solves them to get the only critical point \\((-2,-2)\\), then computes the Hessian determinant. Since \\(D=3>0\\) and \\(f_{xx}=-2<0\\), the critical point is classified as a local maximum."
+    }
+  ]
+}

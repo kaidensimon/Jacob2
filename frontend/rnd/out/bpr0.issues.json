@@ -1,0 +1,13 @@
+[
+ "\"Backpropagation: the error f\" overlaps \"Hidden layer\"",
+ "\"Backpropagation: the error f\" overlaps \"Output layer\"",
+ "\"Loss how wrong?\" overlaps \"prediction\" (the label of arrow predToLoss)",
+ "\"prediction\" (the label of arrow predToLoss) overlaps \"gradient\" (the label of arrow gradLossToOut)",
+ "\"forward pass\" (the label of arrow f_i2_h2) is sitting on top of arrow/line f_i1_h3",
+ "\"forward pass\" (the label of arrow f_i2_h2) is sitting on top of arrow/line f_i3_h1",
+ "\"forward pass\" (the label of arrow f_i2_h2) is sitting on top of arrow/line g_h1_i3",
+ "\"forward pass\" (the label of arrow f_i2_h2) is sitting on top of arrow/line g_h2_i2",
+ "\"forward pass\" (the label of arrow f_i2_h2) is sitting on top of arrow/line g_h3_i1",
+ "\"prediction\" (the label of arrow predToLoss) is sitting on top of arrow/line gradLossToOut",
+ "\"gradient\" (the label of arrow gradLossToOut) is sitting on top of arrow/line predToLoss"
+]

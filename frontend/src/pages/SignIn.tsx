@@ -41,7 +41,7 @@ export default function SignIn() {
   };
 
   return (
-    <div className={styles.container}>
+    <div className={`${styles.container} lg-aurora`}>
       <div className={styles.card}>
         <h1 className={styles.title}>Sign In</h1>
         <p className={styles.subtitle}>Welcome back</p>

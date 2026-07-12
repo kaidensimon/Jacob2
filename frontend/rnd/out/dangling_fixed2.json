@@ -1,0 +1,1 @@
+{"shapes": [{"id": "a", "type": "rectangle", "x": 100, "y": 150, "width": 180, "height": 80, "text": "Input data"}, {"id": "b", "type": "rectangle", "x": 420, "y": 150, "width": 180, "height": 80, "text": "Model"}, {"id": "ab", "type": "arrow", "fromId": "a", "toId": "b"}]}

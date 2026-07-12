@@ -3,17 +3,18 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import path, include
 from rest_framework_simplejwt.views import TokenRefreshView
-from accounts.agent_views import agent_stream, agent_stream_options
-from accounts.excalidraw_agent import excalidraw_stream
-from accounts.orchestrator import orchestrate
-from accounts.manim_agent import manim_generate, manim_save, manim_list
+from agents.agent_views import agent_stream, agent_stream_options
+from agents.excalidraw_agent import excalidraw_stream
+from agents.orchestrator import orchestrate
+from agents.manim_agent import manim_generate, manim_save, manim_list
 from accounts.whiteboard_store import (
     whiteboard_save,
     whiteboard_list,
     whiteboard_get,
     whiteboard_delete,
 )
-from accounts.grapher_vision import grapher_read_image
+from agents.grapher_vision import grapher_read_image
+from agents.lesson_planner import lesson_outline_view, lesson_section_view
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -31,4 +32,6 @@ urlpatterns = [
     path('api/whiteboards/<int:session_id>/', whiteboard_get, name='whiteboard_get'),
     path('api/whiteboards/<int:session_id>/delete/', whiteboard_delete, name='whiteboard_delete'),
     path('api/grapher/read-image/', grapher_read_image, name='grapher_read_image'),
+    path('api/lesson/outline/', lesson_outline_view, name='lesson_outline'),
+    path('api/lesson/section/', lesson_section_view, name='lesson_section'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

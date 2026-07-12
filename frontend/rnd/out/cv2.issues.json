@@ -1,0 +1,4 @@
+[
+ "\"Softmax turns scores into we\" overlaps \"high attention\" (the label of arrow arrow_v1_out)",
+ "arrow/line arrow_v1_out passes through softmax"
+]

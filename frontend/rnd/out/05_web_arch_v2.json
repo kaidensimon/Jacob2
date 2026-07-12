@@ -1,0 +1,369 @@
+{
+  "label": "05_web_arch_v2",
+  "prompt": "Draw a system architecture diagram of a web application: a client/browser, a load balancer, three application servers, a database, and a Redis cache. Connect them with labeled arrows showing the request flow.",
+  "elapsed": "79",
+  "issues": [
+    {
+      "rank": 1000,
+      "desc": "\"Load Balancer\" overlaps \"route request\"",
+      "moveId": "lb",
+      "moveBox": {
+        "x": 265,
+        "y": 350,
+        "w": 194,
+        "h": 80
+      }
+    },
+    {
+      "rank": 1000,
+      "desc": "\"App Server 2\" overlaps \"route request\"",
+      "moveId": "app2",
+      "moveBox": {
+        "x": 520,
+        "y": 335,
+        "w": 190,
+        "h": 70
+      }
+    },
+    {
+      "rank": 1000,
+      "desc": "\"persistent queries\" overlaps \"cache read/write\"",
+      "moveId": "C_GnPqyQTmwVXrrSNLUBO",
+      "moveBox": {
+        "x": 714.7806379530165,
+        "y": 269.87012987012986,
+        "w": 175.29983520507812,
+        "h": 25
+      }
+    },
+    {
+      "rank": 1000,
+      "desc": "\"persistent queries\" overlaps \"cache read/write\"",
+      "moveId": "dL6b6EM_rseiotaznnW_w",
+      "moveBox": {
+        "x": 717.0602273249972,
+        "y": 352.5,
+        "w": 175.29983520507812,
+        "h": 25
+      }
+    }
+  ],
+  "chat": [
+    {
+      "kind": "user",
+      "text": "Draw a system architecture diagram of a web application: a client/browser, a load balancer, three application servers, a database, and a Redis cache. Connect them with labeled arrows showing the request flow."
+    },
+    {
+      "kind": "think",
+      "text": "I'll create a clean left-to-right architecture diagram: client, load balancer, three app servers in a vertical group, then database and Redis on the right, with labeled arrows for request flow, persistent queries, and caching."
+    },
+    {
+      "kind": "action",
+      "text": "Drew text “Web Application Architecture”"
+    },
+    {
+      "kind": "action",
+      "text": "Drew rectangle “Client / Browser”"
+    },
+    {
+      "kind": "action",
+      "text": "Drew rectangle “Load Balancer”"
+    },
+    {
+      "kind": "action",
+      "text": "Drew rectangle “App Server 1”"
+    },
+    {
+      "kind": "action",
+      "text": "Drew rectangle “App Server 2”"
+    },
+    {
+      "kind": "action",
+      "text": "Drew rectangle “App Server 3”"
+    },
+    {
+      "kind": "action",
+      "text": "Drew rectangle “Database”"
+    },
+    {
+      "kind": "action",
+      "text": "Drew rectangle “Redis Cache”"
+    },
+    {
+      "kind": "action",
+      "text": "Arrow client → lb"
+    },
+    {
+      "kind": "action",
+      "text": "Arrow lb → app1"
+    },
+    {
+      "kind": "action",
+      "text": "Arrow lb → app2"
+    },
+    {
+      "kind": "action",
+      "text": "Arrow lb → app3"
+    },
+    {
+      "kind": "action",
+      "text": "Arrow app1 → db"
+    },
+    {
+      "kind": "action",
+      "text": "Arrow app2 → db"
+    },
+    {
+      "kind": "action",
+      "text": "Arrow app3 → db"
+    },
+    {
+      "kind": "action",
+      "text": "Arrow app1 → redis"
+    },
+    {
+      "kind": "action",
+      "text": "Arrow app2 → redis"
+    },
+    {
+      "kind": "action",
+      "text": "Arrow app3 → redis"
+    },
+    {
+      "kind": "message",
+      "text": "This architecture shows traffic entering from the browser, passing through a load balancer, and being distributed across three application servers. The app servers query the database for persistent data and use Redis as a fast cache for repeated reads or temporary data."
+    },
+    {
+      "kind": "think",
+      "text": "Diagnosing and fixing 22 readability issues…"
+    },
+    {
+      "kind": "think",
+      "text": "The first group of problems is caused by arrow labels being centered too close to the boxes they connect. Moving the infrastructure boxes would break the architecture layout, so the right minimal repair is to move the label elements off the boxes into nearby empty lanes."
+    },
+    {
+      "kind": "action",
+      "text": "Moved client"
+    },
+    {
+      "kind": "action",
+      "text": "Moved lb"
+    },
+    {
+      "kind": "think",
+      "text": "The load balancer to app-server arrows have their labels sitting in the same horizontal band as the boxes. The boxes are structurally correct; move the app tier down/up only if needed, but the safer repair is to clear label clutter around the arrows by moving the named app boxes slightly away from the crossing label lanes."
+    },
+    {
+      "kind": "action",
+      "text": "Moved app1"
+    },
+    {
+      "kind": "action",
+      "text": "Moved app2"
+    },
+    {
+      "kind": "action",
+      "text": "Moved app3"
+    },
+    {
+      "kind": "think",
+      "text": "The database and Redis boxes overlap incoming arrow labels because the data-store column is too close to the app-server arrows and their labels. Move the named data-store boxes farther right and slightly apart, keeping them aligned as the destination tier."
+    },
+    {
+      "kind": "action",
+      "text": "Moved db"
+    },
+    {
+      "kind": "action",
+      "text": "Moved redis"
+    },
+    {
+      "kind": "think",
+      "text": "The remaining problems are label-on-label and label-on-arrow collisions among the persistent-query and cache labels. These are annotation labels dropped into the busy middle of the figure, so move each named label to a clear nearby margin above or below its corresponding arrow path rather than moving arrows or redrawing the system."
+    },
+    {
+      "kind": "message",
+      "text": "This architecture shows traffic flowing from the Client/Browser through the Load Balancer, which distributes requests across three App Servers. The app servers then use the Database for persistent queries and Redis Cache for fast cache reads/writes, separating durable storage from low-latency caching."
+    },
+    {
+      "kind": "think",
+      "text": "Diagnosing and fixing 14 readability issues…"
+    },
+    {
+      "kind": "think",
+      "text": "Client and the HTTPS arrow label overlap because the arrow label is centered between client and load balancer but the endpoints are too close to both boxes. The requested movable element is the client; the cleanest repair is to shift the client left enough so the arrow label has whitespace between the boxes while preserving the left-to-right flow."
+    },
+    {
+      "kind": "action",
+      "text": "Moved client"
+    },
+    {
+      "kind": "think",
+      "text": "Load Balancer overlaps both the HTTPS label and the route-request labels because it sits too close to the client arrow label and too close to the fan-out arrows. The right operation is to move the load balancer slightly left, leaving more open space before the app-server column without disrupting the architecture."
+    },
+    {
+      "kind": "action",
+      "text": "Moved lb"
+    },
+    {
+      "kind": "think",
+      "text": "App Server 1 overlaps a persistent-query label because the database arrows and labels are too close to the app column. The allowed element is app1; moving it slightly left and upward opens whitespace on its right while keeping it aligned with the app tier."
+    },
+    {
+      "kind": "action",
+      "text": "Moved app1"
+    },
+    {
+      "kind": "think",
+      "text": "App Server 2 has several labels crossing through it because it is centered in the densest part of the fan-out and data-store arrows. The correct repair is to move app2 slightly left but keep it in the middle app-server tier, creating a clearer corridor to the database and cache."
+    },
+    {
+      "kind": "action",
+      "text": "Moved app2"
+    },
+    {
+      "kind": "think",
+      "text": "App Server 3 overlaps a cache label because the lower cache arrow label sits close to the server. Moving app3 slightly left and down gives the cache path more open space while preserving the vertical stack of app servers."
+    },
+    {
+      "kind": "action",
+      "text": "Moved app3"
+    },
+    {
+      "kind": "think",
+      "text": "Database overlaps persistent-query arrow labels because it is too close to the arrow endpoints and text. The right operation is to move the database a bit farther right/up within the empty margin, keeping it in the data-store tier and leaving space for labels before it."
+    },
+    {
+      "kind": "action",
+      "text": "Moved db"
+    },
+    {
+      "kind": "think",
+      "text": "Redis Cache overlaps cache read/write labels for the same reason: it is too close to the incoming cache arrows. Moving it farther right and slightly down opens the label area between app servers and Redis while keeping it clearly connected to the cache flow."
+    },
+    {
+      "kind": "action",
+      "text": "Moved redis"
+    },
+    {
+      "kind": "think",
+      "text": "The remaining persistent-query and cache labels overlap one another in the middle-right corridor. These are arrow text labels, so the repair is to move the named label elements into nearby empty lanes: persistent-query labels above the red cache labels, with enough vertical separation."
+    },
+    {
+      "kind": "think",
+      "text": "The second named overlapping label is another persistent-query label sitting on top of a cache label. I will move it lower but still above the cache line, placing it in open space between App Server 2 and the database/cache targets."
+    },
+    {
+      "kind": "message",
+      "text": "This architecture shows requests flowing from the client/browser to the load balancer, which distributes traffic across three application servers. The app servers then use the database for persistent queries and Redis for cache reads/writes, separating durable storage from fast cached access."
+    },
+    {
+      "kind": "think",
+      "text": "Diagnosing and fixing 5 readability issues…"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 1: The HTTPS request arrow label sits across the client box because the client and load balancer are too close horizontally around the arrow. The requested editable element is `client`; moving it slightly left/down would not help enough because the arrow starts at its right edge. Better repair is to widen the spacing by moving the client farther left is impossible beyond x=0, so move it a bit upward to clear the label while keeping it near the load balancer and request flow."
+    },
+    {
+      "kind": "action",
+      "text": "Moved client"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 2: The HTTPS request label also overlaps the load balancer because the load balancer is aligned at the same y as the label. The editable element is `lb`; move the load balancer downward to create clear space for the request label between the two boxes, while staying centered between client and app servers."
+    },
+    {
+      "kind": "action",
+      "text": "Moved lb"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 3: The load balancer overlaps a route request label because labels for the outgoing arrows are too close to the load balancer’s body. Since `lb` is the editable element and has already moved down, place it where the label no longer cuts through the box but the arrow fan to app servers still reads as routing."
+    },
+    {
+      "kind": "action",
+      "text": "Moved lb"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 4: App Server 2 overlaps the middle route request label because the label sits on the path from the load balancer to the middle server. The editable element is `app2`; moving it slightly downward gives the label room near the arrow while keeping the three app servers in a vertical cluster."
+    },
+    {
+      "kind": "action",
+      "text": "Moved app2"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 5: A persistent queries label overlaps a cache read/write label in the center-right because database and Redis arrows cross through the same crowded area. The editable element is the persistent-query label `B8jF_3l71KM_EV632-uBQ`; move that label into open space nearer the database arrow, above the crossing cache label, without touching boxes."
+    },
+    {
+      "kind": "message",
+      "text": "This diagram shows a typical web app path: the client/browser sends an HTTPS request to the load balancer, which routes traffic across three application servers. The app servers query the database for persistent data and use Redis as a fast cache for reads and writes."
+    },
+    {
+      "kind": "think",
+      "text": "Diagnosing and fixing 4 readability issues…"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 1: The Load Balancer box at (265,350) is intersected by the green route-request arrow/label running from the load balancer toward App Server 2. Root cause: a connector label/arrow sits on top of the shape because the load balancer is too low and close to the outgoing routes. The allowed operation is moving `lb`; I will move it slightly upward into the empty space between the client and app tier, keeping it near the client request arrow and reducing overlap with route labels without landing on other boxes."
+    },
+    {
+      "kind": "action",
+      "text": "Moved lb"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 2: App Server 2 at (520,335) overlaps the central green route-request label/arrow from the load balancer. Root cause: the middle app server is too close to the incoming route label. The allowed operation is moving `app2`; I will move it a little downward to create clear whitespace above it for the label while keeping the three app servers in a recognizable vertical tier and avoiding Redis below."
+    },
+    {
+      "kind": "action",
+      "text": "Moved app2"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 3: The label shape `xY2aFPKHTtJ6lnA2dU94K` at about (715,270) is a persistent-queries label overlapping a red cache read/write label near the center-right. Root cause: two arrow labels are piled in the same corridor between app servers and data stores. The right operation is moving this label to nearby empty space associated with the database arrow, preferably above the crossing cluster and away from the red cache labels."
+    },
+    {
+      "kind": "think",
+      "text": "Problem 4: The label shape `96P36Ky_XjVtjrdqsqiu-` at about (717,353) is another persistent-queries label overlapping a cache read/write label. Root cause: labels for database and cache arrows share the same central corridor. The right operation is moving this label to a clear nearby space just below the database path and above the lower cache label, avoiding app/server boxes and keeping it visually tied to the database arrow."
+    },
+    {
+      "kind": "message",
+      "text": "This architecture shows traffic flowing from the client/browser into the load balancer, which distributes requests across three application servers. The app servers then communicate with the database for persistent queries and with Redis for cache reads/writes, separating durable storage from fast cached access."
+    },
+    {
+      "kind": "think",
+      "text": "Diagnosing and fixing 4 readability issues…"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 1: the Load Balancer box is intersected by a green route-request label because the label sits along the arrows leaving the load balancer and the box is too high in that path. The correct repair is to move only `lb` slightly down-left into nearby empty space, keeping it between Client and App Servers while clearing the route label and avoiding the client/request arrow."
+    },
+    {
+      "kind": "action",
+      "text": "Moved lb"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 2: App Server 2 overlaps a green route-request label on its left edge because the server box is too close to the label path from the load balancer. The right operation is moving only `app2` a little right/down into open space between App Server 1 and App Server 3, preserving the three-server column and keeping clear of arrow labels."
+    },
+    {
+      "kind": "action",
+      "text": "Moved app2"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 3: one persistent-queries label is placed in the middle of the crossing database/cache arrows, landing on a cache label. Since this is a label-on-label collision, move the specified label `CM9MWcHkyV-X3dwthZQq2` into open space above the App Server 2-to-Database arrow, near the database flow but away from the red cache label."
+    },
+    {
+      "kind": "think",
+      "text": "Problem 4: the second persistent-queries label is also in the congested crossing area with a cache read/write label. It should be moved as a label to nearby empty space below the App Server 2-to-Database path and above the App Server 3 row, keeping it associated with database traffic without colliding with cache labels."
+    },
+    {
+      "kind": "message",
+      "text": "This architecture shows a browser sending HTTPS requests to a load balancer, which routes traffic across three application servers. The app servers query the database for persistent data and use Redis for cache reads/writes, separating durable storage from fast cached access."
+    }
+  ]
+}

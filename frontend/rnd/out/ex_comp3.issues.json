@@ -1,0 +1,20 @@
+[
+ "\"bad token\" overlaps \"syntax error\"",
+ "\"Source code what you wrote\" overlaps \"characters → tokens\" (the label of arrow arrow_source_lexer)",
+ "\"Lexer split into tokens\" overlaps \"characters → tokens\" (the label of arrow arrow_source_lexer)",
+ "\"Lexer split into tokens\" overlaps \"tokens → syntax tree\" (the label of arrow arrow_lexer_parser)",
+ "\"Parser builds structure\" overlaps \"tokens → syntax tree\" (the label of arrow arrow_lexer_parser)",
+ "\"Parser builds structure\" overlaps \"syntax tree → checked tree\" (the label of arrow arrow_parser_type)",
+ "\"Type checker catches type mi\" overlaps \"syntax tree → checked tree\" (the label of arrow arrow_parser_type)",
+ "\"Type checker catches type mi\" overlaps \"checked tree → target code\" (the label of arrow arrow_type_codegen)",
+ "\"Code generator turns plan in\" overlaps \"Machine code CPU can run it\"",
+ "\"Code generator turns plan in\" overlaps \"checked tree → target code\" (the label of arrow arrow_type_codegen)",
+ "\"Code generator turns plan in\" overlaps \"instructions\" (the label of arrow arrow_codegen_machine)",
+ "\"Machine code CPU can run it\" overlaps \"instructions\" (the label of arrow arrow_codegen_machine)",
+ "\"Code generator turns plan in\" is sitting on top of arrow/line arrow_codegen_machine",
+ "the label \"syntax tree → checked tree\" of arrow arrow_parser_type spills onto parser — move them apart or shorten the label",
+ "the label \"syntax tree → checked tree\" of arrow arrow_parser_type spills onto typechecker — move them apart or shorten the label",
+ "the label \"checked tree → target code\" of arrow arrow_type_codegen spills onto typechecker — move them apart or shorten the label",
+ "the label \"checked tree → target code\" of arrow arrow_type_codegen spills onto codegen — move them apart or shorten the label",
+ "the label \"instructions\" of arrow arrow_codegen_machine spills onto codegen — move them apart or shorten the label"
+]

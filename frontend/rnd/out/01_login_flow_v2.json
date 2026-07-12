@@ -1,0 +1,56 @@
+{
+  "label": "01_login_flow_v2",
+  "prompt": "Draw a 3-step login flow with arrows: enter credentials, verify, then dashboard.",
+  "elapsed": "20",
+  "issues": [],
+  "chat": [
+    {
+      "kind": "user",
+      "text": "Draw a 3-step login flow with arrows: enter credentials, verify, then dashboard."
+    },
+    {
+      "kind": "think",
+      "text": "I'll create three clear flowchart boxes in a horizontal row with short labels and arrows between them."
+    },
+    {
+      "kind": "action",
+      "text": "Drew text “3-Step Login Flow”"
+    },
+    {
+      "kind": "action",
+      "text": "Drew rectangle “1) Enter credentials”"
+    },
+    {
+      "kind": "action",
+      "text": "Drew diamond “2) Verify\nAuth + validation”"
+    },
+    {
+      "kind": "action",
+      "text": "Drew rectangle “3) Dashboard\nAccess granted”"
+    },
+    {
+      "kind": "action",
+      "text": "Arrow step1 → step2"
+    },
+    {
+      "kind": "action",
+      "text": "Arrow step2 → step3"
+    },
+    {
+      "kind": "message",
+      "text": "This login flow shows the user entering credentials, the system verifying authentication and validation, and then granting access to the dashboard once verification succeeds."
+    },
+    {
+      "kind": "think",
+      "text": "Reviewing the layout for clarity and balance…"
+    },
+    {
+      "kind": "think",
+      "text": "The login flow already reads cleanly: title at top, three distinct steps left-to-right, and arrows connect step 1 to verification and verification to dashboard. There are no visible structural breaks, overlaps, cut-off text, or detached connectors, so no repair is needed."
+    },
+    {
+      "kind": "message",
+      "text": "This diagram shows a simple 3-step login flow: the user enters credentials, the system verifies them through authentication and validation, and successful verification leads to the dashboard with access granted."
+    }
+  ]
+}

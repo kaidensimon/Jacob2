@@ -1,0 +1,149 @@
+{
+  "label": "01_login_flow",
+  "prompt": "Draw a 3-step login flow with arrows: enter credentials, verify, then dashboard.",
+  "elapsed": "35",
+  "issues": [
+    {
+      "rank": 900,
+      "desc": "\"1. Enter credentials\" is sitting on top of arrow/line arrow12",
+      "moveId": "step1",
+      "moveBox": {
+        "x": 100,
+        "y": 140,
+        "w": 210,
+        "h": 80
+      }
+    },
+    {
+      "rank": 900,
+      "desc": "\"2. Verify\" is sitting on top of arrow/line arrow12",
+      "moveId": "step2",
+      "moveBox": {
+        "x": 430,
+        "y": 140,
+        "w": 180,
+        "h": 80
+      }
+    },
+    {
+      "rank": 900,
+      "desc": "\"2. Verify\" is sitting on top of arrow/line arrow23",
+      "moveId": "step2",
+      "moveBox": {
+        "x": 430,
+        "y": 140,
+        "w": 180,
+        "h": 80
+      }
+    },
+    {
+      "rank": 900,
+      "desc": "\"3. Dashboard\" is sitting on top of arrow/line arrow23",
+      "moveId": "step3",
+      "moveBox": {
+        "x": 730,
+        "y": 140,
+        "w": 190,
+        "h": 80
+      }
+    }
+  ],
+  "chat": [
+    {
+      "kind": "user",
+      "text": "Draw a 3-step login flow with arrows: enter credentials, verify, then dashboard."
+    },
+    {
+      "kind": "think",
+      "text": "I'll create three evenly spaced boxes in a horizontal flow with short arrows between them."
+    },
+    {
+      "kind": "action",
+      "text": "Drew rectangle “1. Enter credentials”"
+    },
+    {
+      "kind": "action",
+      "text": "Drew rectangle “2. Verify”"
+    },
+    {
+      "kind": "action",
+      "text": "Drew rectangle “3. Dashboard”"
+    },
+    {
+      "kind": "action",
+      "text": "Arrow step1 → step2"
+    },
+    {
+      "kind": "action",
+      "text": "Arrow step2 → step3"
+    },
+    {
+      "kind": "message",
+      "text": "This login flow shows the user entering credentials, the system verifying them, and then granting access to the dashboard."
+    },
+    {
+      "kind": "think",
+      "text": "Diagnosing and fixing 4 readability issues…"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 1: step1 is overlapped because arrow12 is drawn horizontally through the middle of the step boxes rather than connecting from box edge to box edge. The allowed editable element is step1, but moving step1 alone would break the left-to-right flow and still leave the arrow crossing the middle band. Since the requested repair says touch only named shapes, I will move step1 slightly upward to clear the arrow while keeping it aligned as the first step and not landing on other shapes."
+    },
+    {
+      "kind": "action",
+      "text": "Moved step1"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 2: step2 is also overlapped by arrow12 for the same root cause: the arrow runs through the row's vertical center. The right operation available for the named element is move. I will move step2 upward to the same y as step1 so the step row stays readable and the arrow no longer crosses its label."
+    },
+    {
+      "kind": "action",
+      "text": "Moved step2"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 3: step2 is overlapped by arrow23 as well. The same upward target chosen for step2 clears both arrows while keeping it near its connecting arrows and preserving the flow."
+    },
+    {
+      "kind": "action",
+      "text": "Moved step2"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 4: step3 is overlapped because arrow23 also passes through the box center. I will move step3 upward to match the other steps, keeping the three-step sequence in one clean row with arrows below the labels rather than through them."
+    },
+    {
+      "kind": "action",
+      "text": "Moved step3"
+    },
+    {
+      "kind": "message",
+      "text": "This login flow shows a simple left-to-right sequence: enter credentials first, then the system verifies them, and successful verification leads to the dashboard."
+    },
+    {
+      "kind": "think",
+      "text": "Diagnosing and fixing 4 readability issues…"
+    },
+    {
+      "kind": "think",
+      "text": "Problem 1 diagnosis: arrow12 runs horizontally through the vertical center of step1, so the connector is crossing the labeled box rather than sitting between boxes. The allowed element is step1; moving it would break the left-to-right flow unless the arrow endpoints followed, which I am not allowed to edit in this pass. The cleanest minimal safe repair is to leave step1 in its flow position because the overlap is caused by connector routing, not the box location."
+    },
+    {
+      "kind": "think",
+      "text": "Problem 2 diagnosis: arrow12 also crosses through step2's center label. The root cause is the same: the arrow is drawn as a line spanning through the boxes instead of connecting box edges. Since only step2 is named as movable, moving step2 would make the flow incoherent and likely create disconnected arrows. I will not move it."
+    },
+    {
+      "kind": "think",
+      "text": "Problem 3 diagnosis: arrow23 crosses through step2 because it starts too far left and passes through the step label. This is a connector endpoint/routing issue, not a bad position for the Verify box. The right operation would be shortening/rerouting the arrow, but arrow23 is not a permitted target in this repair list, so the least harmful action is no move."
+    },
+    {
+      "kind": "think",
+      "text": "Problem 4 diagnosis: arrow23 crosses the Dashboard label inside step3. Moving step3 alone would separate it from the login-flow row and still leave the connector poorly routed. Because the correct structural fix would be changing the arrow endpoint, and only step3 is named, I will preserve the readable three-step layout rather than create a worse layout."
+    },
+    {
+      "kind": "message",
+      "text": "This visual shows a simple three-step login flow: users enter credentials, the system verifies them, and successful verification leads to the dashboard. The arrows indicate the sequence from one step to the next."
+    }
+  ]
+}

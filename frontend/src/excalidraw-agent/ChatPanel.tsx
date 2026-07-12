@@ -1,7 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import type { ChatItem } from './types'
+import { VoiceWave } from '../lesson/VoiceWave'
 import './chat.css'
+
+interface VoiceTutor {
+  on: boolean
+  toggle: () => void
+  status: string
+  transcript: string
+  analyser: React.RefObject<AnalyserNode | null>
+}
 
 interface Props {
   chat: ChatItem[]
@@ -11,6 +20,15 @@ interface Props {
   onNewChat: () => void
   onSaveAnimation: (animationId: number, title: string, save: boolean) => void
   onOpenGrapher: (mode: '2d' | '3d') => void
+  voiceTutor?: VoiceTutor
+}
+
+// Listening has no text label — the live waveform IS the status.
+const VOICE_STATUS_LABEL: Record<string, string> = {
+  connecting: 'Connecting…',
+  thinking: 'Thinking…',
+  teaching: 'Teaching — talk any time to butt in',
+  error: 'Voice error — check the mic / keys',
 }
 
 export function ChatPanel({
@@ -21,6 +39,7 @@ export function ChatPanel({
   onNewChat,
   onSaveAnimation,
   onOpenGrapher,
+  voiceTutor,
 }: Props) {
   const [value, setValue] = useState('')
   const historyRef = useRef<HTMLDivElement>(null)
@@ -42,17 +61,42 @@ export function ChatPanel({
     <div className="ex-chat">
       <div className="ex-chat-header">
         <span className="ex-chat-title">AI Assistant</span>
-        <button className="ex-chat-newchat" onClick={onNewChat} title="New chat">
-          ＋
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          {voiceTutor && (
+            <button
+              className={`ex-voice-toggle${voiceTutor.on ? ' ex-voice-on' : ''}`}
+              onClick={voiceTutor.toggle}
+              title={voiceTutor.on ? 'Turn off Voice Tutor Mode' : 'Turn on Voice Tutor Mode'}
+            >
+              {voiceTutor.on ? 'Voice tutor: on' : 'Voice tutor'}
+            </button>
+          )}
+          <button className="ex-chat-newchat" onClick={onNewChat} title="New chat">
+            +
+          </button>
+        </div>
       </div>
+
+      {voiceTutor?.on && (
+        <div className="ex-voice-strip">
+          <div className="ex-voice-row">
+            <VoiceWave analyser={voiceTutor.analyser} />
+            {VOICE_STATUS_LABEL[voiceTutor.status] && (
+              <span className="ex-voice-status">{VOICE_STATUS_LABEL[voiceTutor.status]}</span>
+            )}
+          </div>
+          {voiceTutor.transcript && (
+            <span className="ex-voice-transcript">“{voiceTutor.transcript}”</span>
+          )}
+        </div>
+      )}
 
       <div className="ex-grapher-bar">
         <button className="ex-grapher-btn" onClick={() => onOpenGrapher('2d')}>
-          📈 2D Graph
+          2D Graph
         </button>
         <button className="ex-grapher-btn" onClick={() => onOpenGrapher('3d')}>
-          🧊 3D Graph
+          3D Graph
         </button>
       </div>
 
@@ -116,7 +160,7 @@ function ChatRow({
     case 'action':
       return (
         <div className="ex-row ex-row-action">
-          <span className="ex-row-action-dot">✎</span> {item.text}
+          <span className="ex-row-action-dot">•</span> {item.text}
         </div>
       )
     case 'error':

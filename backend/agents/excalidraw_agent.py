@@ -18,7 +18,7 @@ from django.http import JsonResponse, StreamingHttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
-from .agent_views import build_completion_kwargs, extract_actions, get_model_name
+from .agent_views import asgi_stream, build_completion_kwargs, extract_actions, get_model_name
 
 # ─── System prompt ────────────────────────────────────────────────────────────
 
@@ -32,6 +32,7 @@ You respond ONLY with a JSON object of this exact form:
 
 All coordinates you read and write are RELATIVE TO YOUR DRAWING ORIGIN — (0, 0) is the TOP-LEFT of YOUR clear drawing area. x increases right, y increases down. Units are pixels.
 - Place YOUR new shapes at NON-NEGATIVE coordinates: roughly (0,0) to (viewport width, viewport height). That area is empty and reserved for you.
+- RUNNING OUT OF ROOM? Your drawing area is not fixed — if you fill it and still have essential content to place, use the `expandView` action (see Action types) to GROW your field of vision instead of cramming shapes together or overlapping them. Your existing shapes keep their coordinates; you simply gain more empty canvas to the right and/or below.
 - NEGATIVE coordinates (or coordinates far to the left/above) are EXISTING content the user already made — including anything they have SELECTED. Read it and learn from it, but do NOT draw your shapes there. Keep your work in your own clear area at x ≥ 0.
 - Each shape's `x`, `y` is its TOP-LEFT corner.
 - A comfortable shape is about 160-220 wide and 60-100 tall.
@@ -81,6 +82,11 @@ Each action is an object with a `_type` field:
 14. regionRef — TOOL for a REGION BETWEEN TWO CURVES (region of integration / change of order of integration). The client draws the ENTIRE figure for you, correctly and without overlap: both bounding curves, the shaded region, x/y axes, a representative ORANGE vertical strip (the dy dx order) and a GREEN horizontal strip (the dx dy order). DO NOT free-hand any of this yourself — you are terrible at it and it always ends up an overlapping mess. Just call the tool, then add the integral equations and short labels in the clear space around it. Give the LOWER and UPPER bounding curves as y=f(x) and the x-range:
     - {"_type": "regionRef", "lower": "x^2", "upper": "4", "xmin": -2, "xmax": 2}
     (place it with x, y, width, height if you want.) It is TURN-ENDING — the figure appears next turn and you add the integrals/labels around it.
+15. expandView — GET MORE ROOM. When you have run out of space in your drawing area (your viewport is full and you still have more essential shapes/labels/steps to place), expand your OWN field of vision rather than cramming or overlapping. Your existing shapes keep their coordinates — you just gain more empty canvas to keep working in, and you can immediately place shapes in the new space (at larger x and/or y than your old viewport). Forms:
+    - grow to the right (default): {"_type": "expandView", "direction": "right"}
+    - grow downward: {"_type": "expandView", "direction": "down"}
+    - grow both ways: {"_type": "expandView", "direction": "both"}
+    Optionally add "amount" (in pixels) to control how much, e.g. {"_type": "expandView", "direction": "down", "amount": 700}. PREFER expanding over shrinking or crowding when the content genuinely needs the room (a long worked solution, a wide flow, many steps). But do NOT expand just to spread a small diagram out — keep compositions tight and only grow when you actually need the space.
 
 PREFER the layout actions (move, align, distribute, stack) over hand-computing coordinates — they place shapes precisely so nothing overlaps. For example, to lay out a flow: create the boxes, then `stack` them, then connect with arrows.
 
@@ -106,7 +112,9 @@ A shape object has:
 ### Arrows
 - To connect shapes, set `fromId` and `toId` to the ids of shapes to connect:
     {"_type": "create", "shape": {"id": "a1", "type": "arrow", "fromId": "box1", "toId": "box2"}}
-- Create the two shapes BEFORE the arrow that connects them. A label on an arrow: add `text`.
+- Create the two shapes BEFORE the arrow that connects them.
+- LABELING A CONNECTOR: put the label in the arrow's OWN `text` field — NEVER as a separate `text` element floating next to the arrow. The arrow's own label rides the line (with a legible background) and moves with it, so it can't collide the way a loose text label does: {"_type":"create","shape":{"id":"a1","type":"arrow","fromId":"box1","toId":"box2","text":"routes to"}}. A standalone `text` placed beside an arrow is the #1 source of unreadable clutter — do not do it.
+- DO NOT REPEAT A LABEL ON PARALLEL CONNECTORS. When several arrows carry the SAME relationship (e.g. a load balancer routing to three servers, or three servers all querying one database), label that relationship ONCE — put the `text` on just one representative arrow (or omit it and state it in your message). Three identical "route request" labels stacked in the same corridor is clutter, not clarity.
 
 ## Rules
 
@@ -138,8 +146,10 @@ Your diagrams must be clean, uncluttered, and instantly understandable by a huma
    - {"type":"math","latex":"\\mathbf{r}(t) = (-4+9t,\\; -5+9t), \\quad 0 \\le t \\le 1"}
    - multi-line: {"type":"math","latex":"\\begin{aligned} |\\mathbf{r}'(t)| &= \\sqrt{9^2+9^2} \\\\ &= 9\\sqrt{2} \\end{aligned}"}
    Use `text` ONLY for prose: titles, step headers ("1) Parametrize the segment"), short word labels. Keep words and math separate: a text header, then the math element under it. A single Greek letter used as a small axis/angle label (θ, ρ, φ, π, λ…) may go in a `text` element — but write the ACTUAL character (θ), never an escape code like "\\u03b8" or a LaTeX command like "\\theta".
-- WORKED EXAMPLES / STEP-BY-STEP: lay it out as a clean vertical column — for each step a short TEXT header, then the equation as a `math` element just below it, then whitespace before the next step. You do NOT need a colored box around every step (whitespace separates them); if you do use background boxes, leave a clear ~30-45px GAP between them so they never touch, keep them the same width, and never write the math as the box's label — place the `math` element on top of the box.
-- SPACING FOR MATH ELEMENTS — IMPORTANT: a `math` element auto-sizes and is often MUCH TALLER and WIDER than you expect (a `\\frac` is ~3 lines tall; a determinant or `\\begin{aligned}` block can be 4-6 lines tall). So space generously: stack consecutive equations at least ~70-90px apart vertically (more for fractions/matrices/aligned blocks), and never start two equations at overlapping positions. Put a final "boxed answer" CLEARLY BELOW the last computation step with a big gap — never on top of it. After creating everything, ALWAYS `review`: equations will be bigger than you guessed, so expect to re-stack them with more vertical space.
+- WORKED EXAMPLES / STEP-BY-STEP: lay it out as a clean vertical column — for each step a short TEXT header, then the equation as a `math` element just below it, then whitespace before the next step. You do NOT need boxes — whitespace separates the steps, and this is the cleanest look.
+- NEVER put a `math` element INSIDE a container (rectangle/ellipse/diamond) that ALSO has a `text` label — the box's centered label and your equation land in the same place and collide, and the equation overflows the box. This is a top cause of ugly output. Do NOT do it.
+- TO HIGHLIGHT A RESULT (e.g. "the answer is…", "local maximum"): do NOT box a `math` element. Instead put a short colored `text` header (e.g. a green "Critical point" or red "Answer") and place the `math` element in clear space just BELOW it, separated by whitespace. Color communicates the emphasis; you don't need a rectangle. If you genuinely must draw a highlight box, it must have NO `text` label of its own and be created LAST and sized to extend at least ~30px beyond the math element on every side.
+- SPACING FOR MATH ELEMENTS — IMPORTANT: a `math` element auto-sizes and is often MUCH TALLER and WIDER than you expect (a `\\frac` is ~3 lines tall; a determinant or `\\begin{aligned}` block can be 4-6 lines tall). So space generously: stack consecutive equations at least ~70-90px apart vertically (more for fractions/matrices/aligned blocks), and never start two equations at overlapping positions. Put the final answer CLEARLY BELOW the last computation step with a big gap — never on top of it. After creating everything, ALWAYS `review`: equations will be bigger than you guessed, so expect to re-stack them with more vertical space.
 - REGION OF INTEGRATION / CHANGING THE ORDER OF INTEGRATION: you MUST use the `regionRef` tool — do NOT free-hand the region, the curves, or the strips (that always becomes an overlapping mess). Read the bounding curves from the inner integral limits (e.g. "∫_{-2}^{2} ∫_{x^2}^{4} f dy dx" → lower curve y=x^2, upper curve y=4, x from -2 to 2) and call: {"_type":"regionRef","lower":"x^2","upper":"4","xmin":-2,"xmax":2}. The whole figure is drawn for you (curves, shaded region, axes, both strips). Then you ONLY add, in the clear space around it: a title, short curve/strip labels, and BOTH integral forms as `math` elements (original order, and the swapped order — solve each boundary for the other variable, e.g. y=x^2 → x=±√y so the swap is ∫_0^4 ∫_{-√y}^{√y} f dx dy).
 - Build on what's already on the canvas instead of redrawing it, unless asked to start over.
 
@@ -452,7 +462,7 @@ def excalidraw_stream(request):
         return _cors(JsonResponse({'error': 'Invalid JSON body'}, status=400))
 
     response = StreamingHttpResponse(
-        _stream_events(prompt_data, api_key),
+        asgi_stream(_stream_events(prompt_data, api_key)),
         content_type='text/event-stream',
     )
     response['Cache-Control'] = 'no-cache, no-transform'

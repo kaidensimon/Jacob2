@@ -1,0 +1,211 @@
+{
+ "shapes": [
+  {
+   "id": "title",
+   "type": "text",
+   "x": 340,
+   "y": 25,
+   "width": 280,
+   "height": 45,
+   "text": "The Water Cycle",
+   "fontSize": 36
+  },
+  {
+   "id": "ocean",
+   "type": "rectangle",
+   "x": 350,
+   "y": 480,
+   "width": 260,
+   "height": 90,
+   "text": "Ocean / lakes\ncollection",
+   "backgroundColor": "#B9E3FF",
+   "strokeColor": "#1B75BB",
+   "fontSize": 22
+  },
+  {
+   "id": "sun",
+   "type": "ellipse",
+   "x": 85,
+   "y": 75,
+   "width": 110,
+   "height": 110,
+   "text": "Sun",
+   "backgroundColor": "#FFD86B",
+   "strokeColor": "#E0A800",
+   "fontSize": 24
+  },
+  {
+   "id": "evapArrow",
+   "type": "arrow",
+   "x": 0,
+   "y": 0,
+   "width": 0,
+   "height": 0,
+   "fromId": "ocean",
+   "toId": "clouds",
+   "text": "evaporation"
+  },
+  {
+   "id": "evapLabel",
+   "type": "text",
+   "x": 640,
+   "y": 360,
+   "width": 210,
+   "height": 52,
+   "text": "Warmth turns\nwater into vapour",
+   "fontSize": 18
+  },
+  {
+   "id": "clouds",
+   "type": "ellipse",
+   "x": 330,
+   "y": 120,
+   "width": 300,
+   "height": 105,
+   "text": "Clouds\ncondensation",
+   "backgroundColor": "#F1F4F8",
+   "strokeColor": "#7A8A99",
+   "fontSize": 22
+  },
+  {
+   "id": "condenseNote",
+   "type": "text",
+   "x": 650,
+   "y": 135,
+   "width": 225,
+   "height": 58,
+   "text": "Tiny drops join up\ninside the cloud",
+   "fontSize": 18
+  },
+  {
+   "id": "precipArrow",
+   "type": "arrow",
+   "x": 0,
+   "y": 0,
+   "width": 0,
+   "height": 0,
+   "fromId": "clouds",
+   "toId": "land",
+   "text": "precipitation"
+  },
+  {
+   "id": "rainDrops",
+   "type": "math",
+   "x": 220,
+   "y": 270,
+   "latex": "\\downarrow\\ \\downarrow\\ \\downarrow"
+  },
+  {
+   "id": "land",
+   "type": "rectangle",
+   "x": 120,
+   "y": 480,
+   "width": 170,
+   "height": 90,
+   "text": "Land",
+   "backgroundColor": "#C8E6A0",
+   "strokeColor": "#5C9A32",
+   "fontSize": 24
+  },
+  {
+   "id": "collectArrow",
+   "type": "arrow",
+   "x": 0,
+   "y": 0,
+   "width": 0,
+   "height": 0,
+   "fromId": "land",
+   "toId": "ocean",
+   "text": "collection / runoff"
+  },
+  {
+   "id": "loopNote",
+   "type": "text",
+   "x": 330,
+   "y": 605,
+   "width": 330,
+   "height": 30,
+   "text": "Round and round — the water keeps moving.",
+   "fontSize": 20
+  }
+ ],
+ "beats": [
+  {
+   "say": "Alright mate, this bit's the water cycle: water doesn't just sit there doing bugger all, it keeps moving in a big round loop.",
+   "reveal": [
+    "title"
+   ],
+   "emphasize": [
+    "title"
+   ]
+  },
+  {
+   "say": "We’ll start with the big stash of water, like the ocean and lakes, where heaps of water is collected.",
+   "reveal": [
+    "ocean"
+   ],
+   "emphasize": [
+    "ocean"
+   ]
+  },
+  {
+   "say": "The Sun warms that water, and that heat gives some water enough energy to head upward as invisible water vapour. Too easy.",
+   "reveal": [
+    "sun",
+    "evapArrow",
+    "evapLabel"
+   ],
+   "emphasize": [
+    "sun",
+    "evapArrow",
+    "ocean"
+   ]
+  },
+  {
+   "say": "Up in the cooler air, that vapour turns back into tiny liquid drops, and those drops make clouds. That change is called condensation, bloody handy word.",
+   "reveal": [
+    "clouds",
+    "condenseNote"
+   ],
+   "emphasize": [
+    "clouds"
+   ]
+  },
+  {
+   "say": "When the drops in the cloud get heavy enough, they fall back down as rain, snow, hail, or sleet. That's precipitation, mate.",
+   "reveal": [
+    "precipArrow",
+    "rainDrops",
+    "land"
+   ],
+   "emphasize": [
+    "precipArrow",
+    "rainDrops"
+   ]
+  },
+  {
+   "say": "Then the fallen water gathers on land and flows downhill into rivers, lakes, and back to the ocean. That's collection and runoff, no dramas.",
+   "reveal": [
+    "collectArrow"
+   ],
+   "emphasize": [
+    "collectArrow",
+    "land",
+    "ocean"
+   ]
+  },
+  {
+   "say": "And here's the ripper idea: it loops around again and again — evaporation, condensation, precipitation, collection — round and round she goes.",
+   "reveal": [
+    "loopNote"
+   ],
+   "emphasize": [
+    "evapArrow",
+    "clouds",
+    "precipArrow",
+    "collectArrow",
+    "loopNote"
+   ]
+  }
+ ]
+}

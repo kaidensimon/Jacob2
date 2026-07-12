@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react'
 import type { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types'
-import { shapesToElements } from './convert'
+import { shapesToElements, ensureCanvasFonts } from './convert'
 import type { Bounds } from './convert'
 import {
   gatherContext,
@@ -10,7 +10,7 @@ import {
   saveAnimation,
   streamAgent,
 } from './agentClient'
-import { detectOverlaps } from './detect'
+import { detectIssues, type DetectedIssue } from './detect'
 import { renderLatexToImage } from './mathRender'
 import { renderGraphToImage } from '../grapher/graphRender'
 import { plotGraph } from '../grapher/plotEquation'
@@ -40,48 +40,84 @@ function settle(): Promise<void> {
   })
 }
 
-// The self-critique prompt for a review pass. Asks the model to judge the
-// drawing on quality — not just overlaps — and to reposition strategically.
+// Turn a detected problem into a GROUNDED instruction: name the exact shape to
+// move, where it is now, and a concrete empty coordinate to move it to — all in
+// the agent's own relative frame (origin-subtracted) so it matches the shape
+// list it sees. This is what lets it reason about a fix instead of guessing.
+// Ground a detected problem for the agent: name the problem and the element it
+// can act on (and where that element currently sits), but leave the FIX ITSELF —
+// where to move it, how big to resize it — entirely to the agent's judgement.
+function describeIssue(issue: DetectedIssue, origin: Vec): string {
+  let s = issue.desc
+  if (issue.resizeId) {
+    s += ` → the shape to fix is \`${issue.resizeId}\`; resize it so the label fits (you decide the new size).`
+    return s
+  }
+  if (issue.moveId && issue.moveBox) {
+    const rx = Math.round(issue.moveBox.x - origin.x)
+    const ry = Math.round(issue.moveBox.y - origin.y)
+    s += ` → the element you can move is \`${issue.moveId}\` (currently at (${rx}, ${ry})). YOU decide where it should go: study the shape list and screenshot, choose a genuinely empty spot that keeps it near what it belongs to, and move it there.`
+  }
+  return s
+}
+
+// The self-critique prompt for a repair pass. It does NOT ask for a vague
+// "make it better" — it walks the model through an explicit DIAGNOSE → CHOOSE
+// THE RIGHT OPERATION → VERIFY THE TARGET → APPLY method, because the failure
+// mode is that the model knows something is wrong but not HOW to fix it
+// correctly. Each issue already carries the exact id + a free target coordinate.
 function buildCritiquePrompt(request: string, issues: string[]): string {
-  const overlapNote =
+  const work =
     issues.length > 0
-      ? `\n\nThese overlaps were detected automatically. Do NOT blindly separate them — JUDGE each one. ` +
-        `Some overlaps are intentional and correct (e.g. Venn-diagram circles, a boundary curve drawn ` +
-        `on a surface, nested or containing shapes, deliberate layering). Keep those. Only fix overlaps ` +
-        `that actually make the drawing messy, cramped, or hard to read:\n- ${issues.join('\n- ')}`
-      : '\n\nNo overlaps were detected automatically, but still look critically.'
+      ? 'PROBLEMS DETECTED (fix THESE, and only these, this pass — each names the problem and the ' +
+        'element you can act on; deciding HOW and WHERE to fix it is up to you):\n- ' +
+        issues.join('\n- ') +
+        '\n'
+      : 'No objective collisions were detected. Only act if you can SEE a clear STRUCTURAL break in the ' +
+        'screenshot — a multi-part figure whose pieces do not meet (a cylinder whose sides miss the ' +
+        'ellipse edges, a cone not meeting at one apex, axes not sharing an origin, a curve detached ' +
+        'from its axes). If the drawing already reads cleanly, change NOTHING and finish.\n'
 
   return (
-    'You are now reviewing your OWN drawing as a designer. Your goal is a clean, uncluttered, ' +
-    'instantly readable diagram. Study the screenshot and reason step by step in a `think` action:\n' +
-    `- LOOK HARD AT THE SCREENSHOT FIRST, and be your HARSHEST critic. Squint: would someone INSTANTLY recognize this as "${request}"? If it reads as disjointed, floating, or misaligned strokes instead of the actual object, it FAILS — say so bluntly and fix it. Do NOT rate your own work generously.\n` +
-    '- STRUCTURAL COHERENCE (critical for anything built from multiple primitives — a cylinder, cone, sphere, box, 3D axes, a curve on axes, etc.): the parts must actually CONNECT and line up into ONE coherent object. Check every join precisely: a cylinder\'s two vertical sides must touch the LEFT and RIGHT edges of BOTH the top and bottom ellipses (same x as the ellipse extremes, spanning exactly top-to-bottom — no gaps, no overshoot); a cone\'s sides meet at a single apex AND land on the base ellipse\'s edges; a box\'s edges meet at shared corners; axes share one origin. If any piece floats, stops short, overshoots, or is offset, the figure looks BROKEN — REPAIR it by moving/resizing those endpoints to the exact connection points. Reconnecting a broken figure is REQUIRED and is NOT "adding clutter".\n' +
-    `- Fidelity: does it clearly and correctly visualize "${request}"? Is anything ESSENTIAL missing, wrong, or unrecognizable?\n` +
-    '- Clutter: is it too busy? Are there too many labels, wordy annotations, or decorative extras? Readable diagrams are sparse — plan to REMOVE or shorten anything non-essential.\n' +
-    '- Readability: are labels short and legible (not cut off, not overlapping shapes/other text)? Is there a clear structure a viewer can follow at a glance?\n' +
-    '- Cleanliness: is it balanced with generous whitespace? Anything cramped, lopsided, or scattered?\n' +
-    '- Collisions: do any shapes/labels overlap in a way that HURTS the visual? Keep intentional overlaps (Venn diagrams, a curve on a surface, nesting, layering); fix only those that make it messy or unreadable.\n' +
-    'Specific fixes to make: (a) if a label sits on top of another label, an arrow, or the content ' +
-    'of a shape, MOVE it into nearby clear space; (b) if a big shape that contains other content has ' +
-    'a centered label, move that label to just inside its TOP edge so it is off the inner content; ' +
-    '(c) if you drew a long leader/pointer line from a label to a distant feature, DELETE the line ' +
-    'and place the label right next to the feature instead (make room if needed).\n' +
-    'A precisely PLOTTED graph curve (a smooth blue line the graph tool drew for you) is EXACT and ' +
-    'FINAL — NEVER delete, move, or redraw it; only tidy the axes and labels around it.\n' +
-    'IMPORTANT: review is for REPAIRING and cleaning up. First FIX broken structure (reconnect / ' +
-    'realign the pieces of a figure so it reads as the real object), then remove clutter. Do NOT add ' +
-    'NEW decorative shapes or labels unless something essential is missing — when in doubt, SIMPLIFY: ' +
-    'delete clutter, shorten or merge wordy/overlapping labels, lift text off shapes into clear space, ' +
-    'and add whitespace. ' +
-    'Move strategically (a spot that fixes the issue AND keeps the composition balanced and ' +
-    'readable), not the minimum nudge. Use stack/distribute/align for tidy groups, resize to widen ' +
-    'containers with cut-off text, move for placement, delete to cut clutter.\n' +
-    'If the drawing is already clean, correct, and readable, STOP — do NOT emit another `review`. ' +
-    'Instead, end with a `message` that EXPLAINS THE VISUAL to the user: what it shows and means, ' +
-    'what the key elements represent, and the takeaway — as if teaching the concept. Do NOT narrate ' +
-    'your edits (never say things like "I moved the row" or "I color-coded the arrows").' +
-    overlapNote
+    `You are REPAIRING your own drawing — not redesigning it. A viewer should instantly recognize it ` +
+    `as "${request}". Reason carefully; a careless "fix" that shoves a label onto something else is ` +
+    `worse than leaving it.\n\n` +
+    work +
+    '\nWork problem-by-problem. For EACH one, think THROUGH the fix in a `think` action BEFORE you ' +
+    'touch anything, in this exact order:\n' +
+    '1. DIAGNOSE the root cause from the coordinates — not just "they overlap". Which is it?\n' +
+    '   • a label placed ON TOP of a shape/another label → it needs to move to empty space;\n' +
+    '   • several `math` equations or notes piled up → they render TALLER than expected, so the whole ' +
+    'column is too tight → re-`stack` that column with a bigger gap (≥ 90), don\'t nudge one;\n' +
+    '   • an annotation dropped INTO the figure instead of the margin → move it out to a tidy side column;\n' +
+    '   • an arrow crossing an unrelated shape → re-route or shorten THAT arrow, or move the shape;\n' +
+    '   • text cut off / overflowing its box → `resize` the container wider (or shorten the text);\n' +
+    '   • a figure whose primitives don\'t connect → a STRUCTURAL break (see below).\n' +
+    '2. CHOOSE THE RIGHT OPERATION for that cause (move / resize / stack / align / distribute / delete) ' +
+    '— the diagnosis dictates the tool. Do not default to nudging everything.\n' +
+    '3. CHOOSE THE TARGET yourself: read the shape list and screenshot, pick a genuinely empty spot ' +
+    'for the element (near what it belongs to), and CHECK it does not land on any other shape\'s box. ' +
+    'If the region is genuinely too crowded for the label to fit, MAKE ROOM (shift a neighbor or the ' +
+    'whole annotation column) rather than cramming — a fix that creates a new overlap is not a fix.\n' +
+    '4. APPLY only the minimum edits, referencing shapes by `id`. NEVER recreate a shape you already ' +
+    'made. NEVER move/delete/redraw a PLOTTED graph curve or its axes (they are exact and final).\n' +
+    '5. STRUCTURAL breaks: reconnect the pieces by moving/resizing their endpoints to the EXACT join ' +
+    'points (e.g. a cylinder\'s left side must run from the top ellipse\'s left-edge point straight ' +
+    'down to the bottom ellipse\'s left-edge point — same x, no gap, no overshoot). Reconnecting is a ' +
+    'repair, not clutter.\n\n' +
+    'RULES: touch ONLY shapes named in a problem (leave everything that already works alone — needless ' +
+    'edits are what ruin good drawings); add NOTHING new unless something ESSENTIAL is missing; prefer ' +
+    'the smallest safe change.\n' +
+    'When every listed problem is resolved and the drawing reads cleanly, STOP — do NOT emit another ' +
+    '`review`. End with a `message` that EXPLAINS THE VISUAL to the user (what it shows and means, the ' +
+    'key elements, the takeaway), never a description of your edits.'
   )
+}
+
+// A shallow copy of the agent's shape map, used to snapshot a drawing before a
+// repair pass so the caller can roll back a pass that made things worse.
+function cloneShapes(m: Map<string, AgentShape>): Map<string, AgentShape> {
+  return new Map(Array.from(m, ([id, shape]) => [id, { ...shape }]))
 }
 
 export function useExcalidrawAgent(
@@ -120,8 +156,6 @@ export function useExcalidrawAgent(
     xmax: number
     box?: Box | null
   } | null>(null)
-  // Set when a pass actually changed the canvas (used to know when to stop).
-  const mutatedRef = useRef(false)
   // The agent's OWN viewport (absolute scene coords) — independent of the user's
   // camera. It's where the agent looks/draws; rendered as a "Jacob's view"
   // overlay. `agentView` is the state mirror so the overlay re-renders.
@@ -170,6 +204,7 @@ export function useExcalidrawAgent(
   )
 
   // Re-render the agent's shapes onto the canvas, preserving the user's own shapes.
+  const fontCorrectedRef = useRef(false)
   const applyToCanvas = useCallback(() => {
     if (!api) return
     const userElements = api
@@ -190,8 +225,28 @@ export function useExcalidrawAgent(
     const newAgentIds = new Set(converted.map((e) => e.id))
     api.updateScene({ elements: [...userElements, ...converted] })
     agentElementIdsRef.current = newAgentIds
-    mutatedRef.current = true
+
+    // If the hand-drawn font wasn't loaded when we just measured, every text
+    // width is baked too narrow and will clip. Don't block streaming — render
+    // now, then re-render ONCE the font is ready so all widths are corrected.
+    if (!fontCorrectedRef.current) {
+      const loaded =
+        typeof document !== 'undefined' &&
+        (document as any).fonts?.check?.('20px Excalifont')
+      if (loaded) {
+        fontCorrectedRef.current = true
+      } else {
+        ensureCanvasFonts().then(() => {
+          fontCorrectedRef.current = true
+          applyToCanvasRef.current?.()
+        })
+      }
+    }
   }, [api])
+  // Stable self-reference so the font-correction re-render can call the latest
+  // applyToCanvas without adding it to its own dependency list.
+  const applyToCanvasRef = useRef(applyToCanvas)
+  applyToCanvasRef.current = applyToCanvas
 
   // Render a `math` shape's LaTeX to an image, register it as an Excalidraw
   // file, and stamp the shape with its fileId + measured size so it renders.
@@ -460,12 +515,12 @@ export function useExcalidrawAgent(
           const scene = api.getSceneElements().filter((e) => !e.isDeleted)
           const toBox = (e: any): Box => ({ x: e.x, y: e.y, w: e.width, h: e.height })
           let box: Box | null = null
-          let label = '🔭 Zoomed out to review the whole drawing'
+          let label = 'Zoomed out to review the whole drawing'
           if (action.ids?.length) {
             const want = new Set(action.ids)
             box = contentBounds(scene.filter((e) => want.has(e.id)).map(toBox))
             if (box) box = boxExpandBy(box, 80)
-            label = `🔍 Zoomed in to inspect ${action.ids.length} shape${action.ids.length > 1 ? 's' : ''}`
+            label = `Zoomed in to inspect ${action.ids.length} shape${action.ids.length > 1 ? 's' : ''}`
           } else if (action.bounds) {
             box = {
               x: action.bounds.x + origin.x,
@@ -473,7 +528,7 @@ export function useExcalidrawAgent(
               w: action.bounds.w,
               h: action.bounds.h,
             }
-            label = '🔍 Zoomed in to take a closer look'
+            label = 'Zoomed in to take a closer look'
           } else {
             // Zoom out to fit everything the agent has drawn.
             const mine = scene.filter((e) => agentElementIdsRef.current.has(e.id))
@@ -484,6 +539,36 @@ export function useExcalidrawAgent(
             setAgentView(box)
             push({ kind: 'action', text: label })
           }
+          break
+        }
+
+        case 'expandView': {
+          // The agent ran out of room. Grow its clear drawing area WITHOUT moving
+          // the origin, so every shape it already placed keeps its coordinates —
+          // it just gains empty canvas to the right and/or below to keep working.
+          const cur = drawAreaRef.current ?? computePlacement().drawArea
+          const dir = action.direction ?? 'right'
+          const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v))
+          const dw =
+            dir === 'down' ? 0 : Math.round(clamp(action.amount ?? cur.w * 0.75, 300, 4000))
+          const dh =
+            dir === 'right' ? 0 : Math.round(clamp(action.amount ?? cur.h * 0.75, 220, 3000))
+          // Cap the total working area so it can't grow without bound.
+          const grown: Box = {
+            x: cur.x,
+            y: cur.y,
+            w: Math.min(cur.w + dw, 9000),
+            h: Math.min(cur.h + dh, 7000),
+          }
+          drawAreaRef.current = grown
+          // Extend what the agent looks at so its next screenshot covers the new
+          // space (keeping any selection it was already framing).
+          setAgentView(agentViewRef.current ? boxUnion(agentViewRef.current, grown) : grown)
+          const where = dir === 'down' ? 'downward' : dir === 'both' ? 'right & down' : 'to the right'
+          push({
+            kind: 'action',
+            text: `Expanded my drawing area ${where} — now ${grown.w}×${grown.h}`,
+          })
           break
         }
 
@@ -511,7 +596,7 @@ export function useExcalidrawAgent(
               expressions: exprs,
               box,
             }
-            push({ kind: 'action', text: `📊 Plotting ${exprs.join(', ')} to trace it accurately…` })
+            push({ kind: 'action', text: `Plotting ${exprs.join(', ')} to trace it accurately…` })
           }
           break
         }
@@ -529,13 +614,22 @@ export function useExcalidrawAgent(
                 ? { x: action.x + origin.x, y: action.y + origin.y, w: action.width, h: action.height }
                 : null
             pendingRegionRef.current = { lower, upper, xmin: action.xmin, xmax: action.xmax, box }
-            push({ kind: 'action', text: `📐 Drawing the region between ${lower} and ${upper}…` })
+            push({ kind: 'action', text: `Drawing the region between ${lower} and ${upper}…` })
           }
           break
         }
       }
     },
-    [api, applyToCanvas, applyPositions, boundsOfId, push, startMathRender, setAgentView]
+    [
+      api,
+      applyToCanvas,
+      applyPositions,
+      boundsOfId,
+      push,
+      startMathRender,
+      setAgentView,
+      computePlacement,
+    ]
   )
 
   // Run one request/response turn against the agent.
@@ -867,7 +961,7 @@ export function useExcalidrawAgent(
                   }
                 })
                 applyToCanvas()
-                push({ kind: 'action', text: '📐 Drew the region figure — adding integrals…' })
+                push({ kind: 'action', text: 'Drew the region figure — adding integrals…' })
                 const figRight = Math.round(rbox.x + rbox.w - originRef.current.x)
                 const figTop = Math.round(rbox.y - originRef.current.y)
                 const note =
@@ -943,7 +1037,7 @@ export function useExcalidrawAgent(
                 axis(`gcurve-graph-${graphRefBudget}-axx`, graph.xAxis)
                 axis(`gcurve-graph-${graphRefBudget}-axy`, graph.yAxis)
                 applyToCanvas()
-                push({ kind: 'action', text: '📈 Drew the graph — labeling it…' })
+                push({ kind: 'action', text: 'Drew the graph — labeling it…' })
                 const curveIds = graph.curves
                   .map((_c, ci) => `gcurve-graph-${graphRefBudget}-${ci}-0`)
                   .join(', ')
@@ -1008,50 +1102,89 @@ export function useExcalidrawAgent(
         }
 
         api.setToast({
-          message: `✏️ ${AGENT_NAME} is drawing nearby — open “${AGENT_NAME}'s view” to follow`,
+          message: `${AGENT_NAME} is drawing nearby — open “${AGENT_NAME}'s view” to follow`,
           duration: 4000,
         })
 
-        // Critique passes. The detector now only flags OBJECTIVE readability
-        // problems (text-on-text, text-on-arrow, arrows through shapes — never
-        // intentional nesting), so we drive the loop with it: keep cleaning up
-        // while real problems remain OR the model wants another look. A stall
-        // guard stops us spinning on something that isn't improving.
+        // Repair passes. The detector flags only OBJECTIVE readability problems
+        // (text-on-text, text-on-arrow, arrows through shapes — never intentional
+        // nesting) and now hands each one the exact shape to move + an empty
+        // target, so the agent can reason about HOW to fix it instead of guessing.
+        // Each pass we SNAPSHOT the drawing and re-measure afterward: if a pass
+        // left the canvas MESSIER than it found it, the fix backfired, so we roll
+        // it back and stop — the user never sees a review pass that made things
+        // worse. A stall guard stops us churning when nothing is improving.
         const reviewHistory = [...baseHistory, { role: 'user' as const, text: task }]
-        let prevIssues = Infinity
+        // Track the BEST (fewest-issue) version seen across ALL passes — not just
+        // per-pass. A single pass that regresses no longer throws away every
+        // earlier fix or halts the loop: we undo just that pass, keep going, and
+        // at the very end restore the cleanest version we ever produced. This is
+        // what stops the loop from giving up with the mess still on screen.
+        await settle()
+        await flushMathRenders()
+        let bestShapes = cloneShapes(shapesRef.current)
+        let bestIssues = detectIssues(api.getSceneElements()).length
         let stalls = 0
         for (let pass = 0; pass < MAX_REVIEW_PASSES; pass++) {
           if (controller.signal.aborted) break
 
           await settle()
           await flushMathRenders()
-          const issues = detectOverlaps(api.getSceneElements())
+          const detected = detectIssues(api.getSceneElements())
+          const before = detected.length
           const wantsReview = reviewRequestedRef.current
 
-          // After the first (always-on) critique: stop only when the canvas is
-          // objectively clean AND the model has nothing more it wants to do.
-          if (pass > 0 && issues.length === 0 && !wantsReview) break
+          // Stop once the canvas is objectively clean and the model isn't asking to
+          // look again. (Pass 0 always runs so it reviews at least once.)
+          if (pass > 0 && before === 0 && !wantsReview) break
+          // Give up only after repeated passes that fail to beat our best.
+          if (stalls >= 2) break
 
-          // Don't spin forever on overlaps that won't reduce.
-          if (issues.length > 0) {
-            if (issues.length >= prevIssues) {
-              if (++stalls >= 2) break
-            } else {
-              stalls = 0
-            }
-            prevIssues = issues.length
-          }
+          // Snapshot this pass's starting point so a backfiring pass can be undone
+          // WITHOUT ending the loop.
+          const snapshot = cloneShapes(shapesRef.current)
+          // Ground each problem in the agent's relative frame: exact id + a
+          // verified-empty coordinate to move it to.
+          const issues = detected.map((i) => describeIssue(i, originRef.current))
 
           reviewRequestedRef.current = false
-          mutatedRef.current = false
           push({
             kind: 'think',
             text:
-              issues.length > 0
-                ? `Cleaning up ${issues.length} readability issue${issues.length > 1 ? 's' : ''}…`
+              before > 0
+                ? `Diagnosing and fixing ${before} readability issue${before > 1 ? 's' : ''}…`
                 : 'Reviewing the layout for clarity and balance…',
           })
           await runServiced(buildCritiquePrompt(task, issues), reviewHistory, issues)
+
+          await settle()
+          await flushMathRenders()
+          const after = detectIssues(api.getSceneElements()).length
+
+          if (after < bestIssues) {
+            // New cleanest version — remember it and reset the stall counter.
+            bestShapes = cloneShapes(shapesRef.current)
+            bestIssues = after
+            stalls = 0
+          } else if (after > before) {
+            // This pass made things worse — undo just this pass so the next one
+            // never builds on a regression, and count it against the stall budget.
+            shapesRef.current = snapshot
+            applyToCanvas()
+            stalls++
+          } else {
+            // No net improvement; nudge the stall counter so we don't loop forever.
+            stalls++
+          }
+        }
+
+        // Restore the cleanest version we saw if the canvas ended up worse.
+        await settle()
+        await flushMathRenders()
+        if (detectIssues(api.getSceneElements()).length > bestIssues) {
+          shapesRef.current = bestShapes
+          applyToCanvas()
+          push({ kind: 'think', text: 'Kept the cleanest version from my review passes.' })
         }
       } catch (err: any) {
         if (err?.name !== 'AbortError') {
@@ -1071,6 +1204,7 @@ export function useExcalidrawAgent(
       isGenerating,
       push,
       runTurn,
+      applyToCanvas,
       reconcileDeleted,
       onOpenGrapher,
       plotFromElements,

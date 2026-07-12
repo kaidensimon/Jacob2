@@ -1,0 +1,590 @@
+{
+ "shapes": [
+  {
+   "id": "title",
+   "type": "text",
+   "x": 240,
+   "y": 25,
+   "width": 480,
+   "height": 40,
+   "text": "Backpropagation: the error flows backwards",
+   "fontSize": 28
+  },
+  {
+   "id": "inputLabel",
+   "type": "text",
+   "x": 75,
+   "y": 85,
+   "width": 120,
+   "height": 30,
+   "text": "Input layer",
+   "fontSize": 20
+  },
+  {
+   "id": "hiddenLabel",
+   "type": "text",
+   "x": 340,
+   "y": 85,
+   "width": 140,
+   "height": 30,
+   "text": "Hidden layer",
+   "fontSize": 20
+  },
+  {
+   "id": "outputLabel",
+   "type": "text",
+   "x": 610,
+   "y": 85,
+   "width": 140,
+   "height": 30,
+   "text": "Output layer",
+   "fontSize": 20
+  },
+  {
+   "id": "input1",
+   "type": "ellipse",
+   "x": 95,
+   "y": 155,
+   "width": 70,
+   "height": 55,
+   "text": "x₁",
+   "backgroundColor": "#E8F3FF"
+  },
+  {
+   "id": "input2",
+   "type": "ellipse",
+   "x": 95,
+   "y": 270,
+   "width": 70,
+   "height": 55,
+   "text": "x₂",
+   "backgroundColor": "#E8F3FF"
+  },
+  {
+   "id": "input3",
+   "type": "ellipse",
+   "x": 95,
+   "y": 385,
+   "width": 70,
+   "height": 55,
+   "text": "x₃",
+   "backgroundColor": "#E8F3FF"
+  },
+  {
+   "id": "hidden1",
+   "type": "ellipse",
+   "x": 370,
+   "y": 140,
+   "width": 75,
+   "height": 55,
+   "text": "h₁",
+   "backgroundColor": "#EAF8EA"
+  },
+  {
+   "id": "hidden2",
+   "type": "ellipse",
+   "x": 370,
+   "y": 255,
+   "width": 75,
+   "height": 55,
+   "text": "h₂",
+   "backgroundColor": "#EAF8EA"
+  },
+  {
+   "id": "hidden3",
+   "type": "ellipse",
+   "x": 370,
+   "y": 370,
+   "width": 75,
+   "height": 55,
+   "text": "h₃",
+   "backgroundColor": "#EAF8EA"
+  },
+  {
+   "id": "output1",
+   "type": "ellipse",
+   "x": 625,
+   "y": 255,
+   "width": 80,
+   "height": 60,
+   "text": "ŷ",
+   "backgroundColor": "#FFF4DE"
+  },
+  {
+   "id": "f_i1_h1",
+   "type": "arrow",
+   "x": 0,
+   "y": 0,
+   "width": 0,
+   "height": 0,
+   "fromId": "input1",
+   "toId": "hidden1",
+   "strokeColor": "#2B6CB0"
+  },
+  {
+   "id": "f_i1_h2",
+   "type": "arrow",
+   "x": 0,
+   "y": 0,
+   "width": 0,
+   "height": 0,
+   "fromId": "input1",
+   "toId": "hidden2",
+   "strokeColor": "#2B6CB0"
+  },
+  {
+   "id": "f_i1_h3",
+   "type": "arrow",
+   "x": 0,
+   "y": 0,
+   "width": 0,
+   "height": 0,
+   "fromId": "input1",
+   "toId": "hidden3",
+   "strokeColor": "#2B6CB0"
+  },
+  {
+   "id": "f_i2_h1",
+   "type": "arrow",
+   "x": 0,
+   "y": 0,
+   "width": 0,
+   "height": 0,
+   "fromId": "input2",
+   "toId": "hidden1",
+   "strokeColor": "#2B6CB0"
+  },
+  {
+   "id": "f_i2_h2",
+   "type": "arrow",
+   "x": 0,
+   "y": 0,
+   "width": 0,
+   "height": 0,
+   "fromId": "input2",
+   "toId": "hidden2",
+   "strokeColor": "#2B6CB0",
+   "text": "forward pass"
+  },
+  {
+   "id": "f_i2_h3",
+   "type": "arrow",
+   "x": 0,
+   "y": 0,
+   "width": 0,
+   "height": 0,
+   "fromId": "input2",
+   "toId": "hidden3",
+   "strokeColor": "#2B6CB0"
+  },
+  {
+   "id": "f_i3_h1",
+   "type": "arrow",
+   "x": 0,
+   "y": 0,
+   "width": 0,
+   "height": 0,
+   "fromId": "input3",
+   "toId": "hidden1",
+   "strokeColor": "#2B6CB0"
+  },
+  {
+   "id": "f_i3_h2",
+   "type": "arrow",
+   "x": 0,
+   "y": 0,
+   "width": 0,
+   "height": 0,
+   "fromId": "input3",
+   "toId": "hidden2",
+   "strokeColor": "#2B6CB0"
+  },
+  {
+   "id": "f_i3_h3",
+   "type": "arrow",
+   "x": 0,
+   "y": 0,
+   "width": 0,
+   "height": 0,
+   "fromId": "input3",
+   "toId": "hidden3",
+   "strokeColor": "#2B6CB0"
+  },
+  {
+   "id": "f_h1_o",
+   "type": "arrow",
+   "x": 0,
+   "y": 0,
+   "width": 0,
+   "height": 0,
+   "fromId": "hidden1",
+   "toId": "output1",
+   "strokeColor": "#2B6CB0"
+  },
+  {
+   "id": "f_h2_o",
+   "type": "arrow",
+   "x": 0,
+   "y": 0,
+   "width": 0,
+   "height": 0,
+   "fromId": "hidden2",
+   "toId": "output1",
+   "strokeColor": "#2B6CB0"
+  },
+  {
+   "id": "f_h3_o",
+   "type": "arrow",
+   "x": 0,
+   "y": 0,
+   "width": 0,
+   "height": 0,
+   "fromId": "hidden3",
+   "toId": "output1",
+   "strokeColor": "#2B6CB0"
+  },
+  {
+   "id": "target",
+   "type": "rectangle",
+   "x": 790,
+   "y": 155,
+   "width": 110,
+   "height": 60,
+   "text": "target y",
+   "backgroundColor": "#F5F5F5"
+  },
+  {
+   "id": "loss",
+   "type": "rectangle",
+   "x": 790,
+   "y": 270,
+   "width": 120,
+   "height": 75,
+   "text": "Loss\nhow wrong?",
+   "backgroundColor": "#FFE6E6",
+   "strokeColor": "#C53030"
+  },
+  {
+   "id": "predToLoss",
+   "type": "arrow",
+   "x": 0,
+   "y": 0,
+   "width": 0,
+   "height": 0,
+   "fromId": "output1",
+   "toId": "loss",
+   "strokeColor": "#2B6CB0",
+   "text": "prediction"
+  },
+  {
+   "id": "targetToLoss",
+   "type": "arrow",
+   "x": 0,
+   "y": 0,
+   "width": 0,
+   "height": 0,
+   "fromId": "target",
+   "toId": "loss",
+   "strokeColor": "#2B6CB0"
+  },
+  {
+   "id": "gradLossToOut",
+   "type": "arrow",
+   "x": 0,
+   "y": 0,
+   "width": 0,
+   "height": 0,
+   "fromId": "loss",
+   "toId": "output1",
+   "strokeColor": "#D53F8C",
+   "text": "gradient"
+  },
+  {
+   "id": "g_out_h1",
+   "type": "arrow",
+   "x": 0,
+   "y": 0,
+   "width": 0,
+   "height": 0,
+   "fromId": "output1",
+   "toId": "hidden1",
+   "strokeColor": "#D53F8C"
+  },
+  {
+   "id": "g_out_h2",
+   "type": "arrow",
+   "x": 0,
+   "y": 0,
+   "width": 0,
+   "height": 0,
+   "fromId": "output1",
+   "toId": "hidden2",
+   "strokeColor": "#D53F8C"
+  },
+  {
+   "id": "g_out_h3",
+   "type": "arrow",
+   "x": 0,
+   "y": 0,
+   "width": 0,
+   "height": 0,
+   "fromId": "output1",
+   "toId": "hidden3",
+   "strokeColor": "#D53F8C"
+  },
+  {
+   "id": "g_h1_i1",
+   "type": "arrow",
+   "x": 0,
+   "y": 0,
+   "width": 0,
+   "height": 0,
+   "fromId": "hidden1",
+   "toId": "input1",
+   "strokeColor": "#D53F8C"
+  },
+  {
+   "id": "g_h1_i2",
+   "type": "arrow",
+   "x": 0,
+   "y": 0,
+   "width": 0,
+   "height": 0,
+   "fromId": "hidden1",
+   "toId": "input2",
+   "strokeColor": "#D53F8C"
+  },
+  {
+   "id": "g_h1_i3",
+   "type": "arrow",
+   "x": 0,
+   "y": 0,
+   "width": 0,
+   "height": 0,
+   "fromId": "hidden1",
+   "toId": "input3",
+   "strokeColor": "#D53F8C"
+  },
+  {
+   "id": "g_h2_i1",
+   "type": "arrow",
+   "x": 0,
+   "y": 0,
+   "width": 0,
+   "height": 0,
+   "fromId": "hidden2",
+   "toId": "input1",
+   "strokeColor": "#D53F8C"
+  },
+  {
+   "id": "g_h2_i2",
+   "type": "arrow",
+   "x": 0,
+   "y": 0,
+   "width": 0,
+   "height": 0,
+   "fromId": "hidden2",
+   "toId": "input2",
+   "strokeColor": "#D53F8C"
+  },
+  {
+   "id": "g_h2_i3",
+   "type": "arrow",
+   "x": 0,
+   "y": 0,
+   "width": 0,
+   "height": 0,
+   "fromId": "hidden2",
+   "toId": "input3",
+   "strokeColor": "#D53F8C"
+  },
+  {
+   "id": "g_h3_i1",
+   "type": "arrow",
+   "x": 0,
+   "y": 0,
+   "width": 0,
+   "height": 0,
+   "fromId": "hidden3",
+   "toId": "input1",
+   "strokeColor": "#D53F8C"
+  },
+  {
+   "id": "g_h3_i2",
+   "type": "arrow",
+   "x": 0,
+   "y": 0,
+   "width": 0,
+   "height": 0,
+   "fromId": "hidden3",
+   "toId": "input2",
+   "strokeColor": "#D53F8C"
+  },
+  {
+   "id": "g_h3_i3",
+   "type": "arrow",
+   "x": 0,
+   "y": 0,
+   "width": 0,
+   "height": 0,
+   "fromId": "hidden3",
+   "toId": "input3",
+   "strokeColor": "#D53F8C"
+  },
+  {
+   "id": "updateBox",
+   "type": "rectangle",
+   "x": 285,
+   "y": 525,
+   "width": 390,
+   "height": 80,
+   "text": "Update every weight",
+   "backgroundColor": "#F0E8FF",
+   "strokeColor": "#6B46C1"
+  },
+  {
+   "id": "updateRule",
+   "type": "math",
+   "x": 340,
+   "y": 565,
+   "latex": "w_{\\text{new}} = w_{\\text{old}} - \\eta\\,\\frac{\\partial L}{\\partial w}"
+  },
+  {
+   "id": "gradToUpdate",
+   "type": "arrow",
+   "x": 0,
+   "y": 0,
+   "width": 0,
+   "height": 0,
+   "fromId": "loss",
+   "toId": "updateBox",
+   "strokeColor": "#D53F8C",
+   "text": "use these slopes"
+  }
+ ],
+ "beats": [
+  {
+   "say": "Alright mate, this bit is backpropagation: the error flowing backwards so the network can learn, not just guess and hope for the bloody best.",
+   "reveal": [
+    "title"
+   ],
+   "emphasize": [
+    "title"
+   ]
+  },
+  {
+   "say": "Here’s the same simple three-layer setup: inputs on the left, hidden neurons in the middle, and one output prediction on the right. No dramas, it’s just signals moving through layers.",
+   "reveal": [
+    "inputLabel",
+    "hiddenLabel",
+    "outputLabel",
+    "input1",
+    "input2",
+    "input3",
+    "hidden1",
+    "hidden2",
+    "hidden3",
+    "output1"
+   ],
+   "emphasize": [
+    "input1",
+    "input2",
+    "input3",
+    "hidden1",
+    "hidden2",
+    "hidden3",
+    "output1"
+   ]
+  },
+  {
+   "say": "On the forward pass, every input feeds the hidden layer, then the hidden layer feeds the output. All these blue connections are weights the model can tweak, which is where the magic, and the hard yakka, lives.",
+   "reveal": [
+    "f_i1_h1",
+    "f_i1_h2",
+    "f_i1_h3",
+    "f_i2_h1",
+    "f_i2_h2",
+    "f_i2_h3",
+    "f_i3_h1",
+    "f_i3_h2",
+    "f_i3_h3",
+    "f_h1_o",
+    "f_h2_o",
+    "f_h3_o"
+   ],
+   "emphasize": [
+    "f_i2_h2",
+    "f_h2_o"
+   ]
+  },
+  {
+   "say": "The prediction gets compared with the real target, and the loss is just a score for how wrong the network was. Bigger loss means the guess was more dodgy, simple as that.",
+   "reveal": [
+    "target",
+    "loss",
+    "predToLoss",
+    "targetToLoss"
+   ],
+   "emphasize": [
+    "output1",
+    "target",
+    "loss"
+   ]
+  },
+  {
+   "say": "Now backprop kicks in: starting at the loss, we ask how changing the output would change that error. That pink gradient is the first clue about which way to nudge things.",
+   "reveal": [
+    "gradLossToOut"
+   ],
+   "emphasize": [
+    "loss",
+    "gradLossToOut",
+    "output1"
+   ]
+  },
+  {
+   "say": "Then that gradient flows back through every output weight into the hidden layer. Each connection gets its own blame score, not in a mean way, just a useful bloody slope.",
+   "reveal": [
+    "g_out_h1",
+    "g_out_h2",
+    "g_out_h3"
+   ],
+   "emphasize": [
+    "g_out_h1",
+    "g_out_h2",
+    "g_out_h3"
+   ]
+  },
+  {
+   "say": "And it keeps flowing back again through the hidden-to-input weights. That’s the chain rule doing the bookkeeping, so even early weights learn how they helped stuff things up.",
+   "reveal": [
+    "g_h1_i1",
+    "g_h1_i2",
+    "g_h1_i3",
+    "g_h2_i1",
+    "g_h2_i2",
+    "g_h2_i3",
+    "g_h3_i1",
+    "g_h3_i2",
+    "g_h3_i3"
+   ],
+   "emphasize": [
+    "g_h2_i1",
+    "g_h2_i2",
+    "g_h2_i3"
+   ]
+  },
+  {
+   "say": "Finally, every weight gets updated by stepping a little bit downhill on the loss. The learning rate controls the step size, so if it’s too huge she’ll go wild, and if it’s tiny she’ll crawl like mad.",
+   "reveal": [
+    "updateBox",
+    "updateRule",
+    "gradToUpdate"
+   ],
+   "emphasize": [
+    "updateRule",
+    "gradToUpdate"
+   ]
+  }
+ ]
+}
