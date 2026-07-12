@@ -40,9 +40,9 @@ with a live talking sprite.
 
 ## Example: generated Manim video
 
-<video src="example_video.mp4" controls width="100%"></video>
+[![Watch the Manim video demo](https://img.youtube.com/vi/CTkBHREX_RI/hqdefault.jpg)](https://www.youtube.com/watch?v=CTkBHREX_RI)
 
-[Watch the example video](example_video.mp4)
+[Watch the Manim video demo](https://www.youtube.com/watch?v=CTkBHREX_RI)
 
 ---
 
