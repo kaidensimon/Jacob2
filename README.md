@@ -1,10 +1,4 @@
 # Jacob V2
-TODO: 
-* MAKE IT SO THE FIRST MESSAGE IS RESPONDING TO THE REQUEST. NOT FILLER
-* MAKE IT SO THAT WHEN THE LESSON IS OVER, THE AGENT LETS THE USER KNOW ("THAT CONCLUDES THE LESSON") OR SUM LIKE THAT
-* MAKE SURE IT USES ANALAGIES
-
-
 An AI-powered visualization studio. Describe a concept in plain language and the app decides the best way to show it: a clean **whiteboard diagram**, an **animated Manim video**, or an **interactive 2D/3D graph**, then builds it for you in real time.
 
 The successor to [Jacob V1](https://github.com/kaidensimon/Jacob).
