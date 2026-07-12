@@ -83,6 +83,17 @@ DIGEST_LINES = [
     "There we go, much tidier. Have a squiz for a bit, and smack that ready button when you're good to go.",
     "All fixed up mate. Sit with it for a tick, and hit ready when it's clicked.",
 ]
+# Digest lines for the LAST section — the lesson is over, don't imply more.
+FINAL_DIGEST_LINES = [
+    "Tidied that up — and that's the whole lesson done and dusted, mate. Take a last squiz, then hit end lesson whenever you're ready.",
+    "All cleaned up, and that wraps the lesson! Sit with the board a moment, then smack end lesson when you're good.",
+]
+# Spoken the moment a lesson is requested — a human reply, NOT the mid-lesson filler.
+INTRO_LINES = [
+    "For sure mate — lemme plan out a proper lesson on that. Gimme a tick.",
+    "Too easy. I'll map this one out real quick — hang tight.",
+    "Righto, good pick. Give us a moment to sketch out how I'll teach it.",
+]
 DIGEST_SECONDS = 30
 _filler_audio: dict = {}  # text -> cached Rime mp3 chunks (survives across lessons)
 
@@ -261,18 +272,25 @@ class LessonConsumer(AsyncWebsocketConsumer):
         key = _key('OPENAI_API_KEY')
         try:
             await self.send_json({'type': 'thinking'})
-            outline = await asyncio.to_thread(lesson_outline, topic, key)
+            # Plan the outline WHILE speaking a human acknowledgement — no
+            # generic "hang tight" filler at the start of a lesson.
+            outline_task = asyncio.create_task(asyncio.to_thread(lesson_outline, topic, key))
+            self._warm_fillers()
+            await self._speak_canned(random.choice(INTRO_LINES))
+            outline = await outline_task
             sections = outline.get('sections', [])
             await self.send_json({'type': 'lessonStarted', 'title': outline.get('title', topic),
                                   'sections': [s.get('title') for s in sections]})
             # Pipeline: section i+1 is planned (and its first beat's TTS fetched)
             # WHILE section i is being narrated, so there's no dead air between
             # sections. Priors for i+1 are sections[:i+1] — known in advance.
-            self._warm_fillers()
-            next_plan = self._plan_ahead(topic, sections[0], [], key) if sections else None
+            next_plan = (self._plan_ahead(topic, sections[0], [], key, len(sections) == 1)
+                         if sections else None)
             for i, section in enumerate(sections):
-                plan, first_audio = await self._await_plan(next_plan)
-                next_plan = (self._plan_ahead(topic, sections[i + 1], sections[:i + 1], key)
+                # The intro already covered the first wait — no filler there.
+                plan, first_audio = await self._await_plan(next_plan, use_filler=(i > 0))
+                next_plan = (self._plan_ahead(topic, sections[i + 1], sections[:i + 1], key,
+                                              i + 1 == len(sections) - 1)
                              if i + 1 < len(sections) else None)
                 if not plan.get('shapes'):
                     continue
@@ -281,7 +299,7 @@ class LessonConsumer(AsyncWebsocketConsumer):
                 await self._conduct(plan, origin, first_audio)
                 # Light visual correction pass — blocks the next section until
                 # any oopsies are fixed and the learner's had time to digest.
-                await self._review_section(plan, origin)
+                await self._review_section(plan, origin, final=(i == len(sections) - 1))
                 self._prior.append(section)
             self._current_section = None
             await self.send_json({'type': 'lessonDone'})
@@ -292,11 +310,14 @@ class LessonConsumer(AsyncWebsocketConsumer):
         finally:
             self._in_lesson = False
 
-    async def _await_plan(self, plan_task):
+    async def _await_plan(self, plan_task, use_filler=True):
         """Await the backgrounded next-section plan. If it isn't ready when the
         previous section ends, cover the silence with canned filler lines. A
         filler that starts always FINISHES — the plan-ready check only happens
-        BETWEEN lines, never mid-clip."""
+        BETWEEN lines, never mid-clip. With use_filler=False (lesson start,
+        already covered by the intro), just wait quietly."""
+        if not use_filler:
+            return await plan_task
         done, _ = await asyncio.wait({plan_task}, timeout=2.0)  # sub-2s gap: stay quiet
         order = random.sample(FILLER_LINES, len(FILLER_LINES))
         n = 0
@@ -307,11 +328,11 @@ class LessonConsumer(AsyncWebsocketConsumer):
         return await plan_task
 
     # ── post-section visual correction (apology → fix → digest timer) ────────────
-    async def _review_section(self, plan, origin):
+    async def _review_section(self, plan, origin, final=False):
         """Ask the browser's detector whether this section's board has readability
         issues. If so: canned apology → LLM fix pass (the agent decides where
         things move) → board replaced → canned digest line → 30s timer the
-        learner can skip with the 'ready to move on' button."""
+        learner can skip with the button ('End lesson' on the final section)."""
         shapes = plan.get('shapes') or []
         ids = [s.get('id') for s in shapes if s.get('id')]
         if not ids:
@@ -344,9 +365,9 @@ class LessonConsumer(AsyncWebsocketConsumer):
             issues = remaining
         if not replaced:
             return
-        await self._speak_canned(random.choice(DIGEST_LINES))
+        await self._speak_canned(random.choice(FINAL_DIGEST_LINES if final else DIGEST_LINES))
         self._move_on.clear()
-        await self.send_json({'type': 'digest', 'seconds': DIGEST_SECONDS})
+        await self.send_json({'type': 'digest', 'seconds': DIGEST_SECONDS, 'final': final})
         ready = asyncio.create_task(self._move_on.wait())
         _, pending = await asyncio.wait({ready}, timeout=DIGEST_SECONDS)
         for p in pending:
@@ -387,7 +408,7 @@ class LessonConsumer(AsyncWebsocketConsumer):
         if not _key('RIME_API_KEY'):
             return
         async def warm():
-            for text in FILLER_LINES + APOLOGY_LINES + DIGEST_LINES:
+            for text in INTRO_LINES + FILLER_LINES + APOLOGY_LINES + DIGEST_LINES + FINAL_DIGEST_LINES:
                 if text not in _filler_audio:
                     _filler_audio[text] = await self._fetch_tts(text)
         task = asyncio.create_task(warm())
@@ -408,11 +429,12 @@ class LessonConsumer(AsyncWebsocketConsumer):
         await self.send_json({'type': 'answer', 'text': text})
         await self._speak_and_wait(text, prefetched=pre)
 
-    def _plan_ahead(self, topic, section, priors, key):
+    def _plan_ahead(self, topic, section, priors, key, is_last=False):
         """Plan a section in the background and pre-fetch its first beat's TTS,
         so the section can start speaking the moment the previous one ends."""
         async def go():
-            plan = await asyncio.to_thread(plan_section, topic, section, priors, key)
+            plan = await asyncio.to_thread(plan_section, topic, section, priors, key,
+                                           is_last=is_last)
             _tidy_shapes(plan.get('shapes') or [])
             beats = plan.get('beats') or []
             audio = self._prefetch(beats[0].get('say', '')) if beats else None

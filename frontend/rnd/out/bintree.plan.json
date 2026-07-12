@@ -1,0 +1,142 @@
+{
+ "shapes": [
+  {
+   "id": "title",
+   "type": "text",
+   "x": 330,
+   "y": 35,
+   "width": 300,
+   "height": 45,
+   "text": "What Is a Binary Tree",
+   "fontSize": 28
+  },
+  {
+   "id": "root",
+   "type": "ellipse",
+   "x": 380,
+   "y": 120,
+   "width": 200,
+   "height": 80,
+   "text": "Root node",
+   "backgroundColor": "#E8F1FF",
+   "strokeColor": "#2F6FDB",
+   "fontSize": 20
+  },
+  {
+   "id": "leftChild",
+   "type": "ellipse",
+   "x": 170,
+   "y": 290,
+   "width": 200,
+   "height": 80,
+   "text": "Left child",
+   "backgroundColor": "#F0FFF4",
+   "strokeColor": "#2F9E44",
+   "fontSize": 20
+  },
+  {
+   "id": "rightChild",
+   "type": "ellipse",
+   "x": 590,
+   "y": 290,
+   "width": 200,
+   "height": 80,
+   "text": "Right child",
+   "backgroundColor": "#F0FFF4",
+   "strokeColor": "#2F9E44",
+   "fontSize": 20
+  },
+  {
+   "id": "arrowLeft",
+   "type": "arrow",
+   "x": 0,
+   "y": 0,
+   "width": 0,
+   "height": 0,
+   "fromId": "root",
+   "toId": "leftChild",
+   "text": "left"
+  },
+  {
+   "id": "arrowRight",
+   "type": "arrow",
+   "x": 0,
+   "y": 0,
+   "width": 0,
+   "height": 0,
+   "fromId": "root",
+   "toId": "rightChild",
+   "text": "right"
+  },
+  {
+   "id": "hierarchyNote",
+   "type": "rectangle",
+   "x": 60,
+   "y": 455,
+   "width": 370,
+   "height": 105,
+   "text": "Hierarchy:\nparent above,\nchildren below",
+   "backgroundColor": "#FFF8DB",
+   "strokeColor": "#D6A800",
+   "fontSize": 20
+  },
+  {
+   "id": "ruleBox",
+   "type": "rectangle",
+   "x": 530,
+   "y": 455,
+   "width": 370,
+   "height": 105,
+   "text": "Binary tree rule:\neach node has\nat most 2 children",
+   "backgroundColor": "#FFECEC",
+   "strokeColor": "#D64545",
+   "fontSize": 20
+  }
+ ],
+ "beats": [
+  {
+   "say": "Righto mate, a binary tree is just a hierarchy of nodes, with one starting point up the top called the root. Think of it like the first bloke in the family tree, no dramas.",
+   "reveal": [
+    "title",
+    "root"
+   ],
+   "emphasize": [
+    "root"
+   ]
+  },
+  {
+   "say": "From that root, you can branch down to a left child and a right child. Those labels matter, because binary trees keep the two sides distinct, which is pretty bloody handy.",
+   "reveal": [
+    "leftChild",
+    "rightChild",
+    "arrowLeft",
+    "arrowRight"
+   ],
+   "emphasize": [
+    "arrowLeft",
+    "arrowRight"
+   ]
+  },
+  {
+   "say": "The key shape is top-down: parents sit above, and their children sit below. So the structure tells us who belongs under who, nice and clean, not some dodgy pile of data.",
+   "reveal": [
+    "hierarchyNote"
+   ],
+   "emphasize": [
+    "root",
+    "leftChild",
+    "rightChild",
+    "hierarchyNote"
+   ]
+  },
+  {
+   "say": "And here's the big rule, mate: binary means each node can have at most two children. It can have zero, one, or two, but never three — that's the whole bloody point.",
+   "reveal": [
+    "ruleBox"
+   ],
+   "emphasize": [
+    "ruleBox"
+   ]
+  }
+ ]
+}

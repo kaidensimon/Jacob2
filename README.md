@@ -32,6 +32,18 @@ Highlights:
 
 ---
 
+## Voice lesson demo
+
+Turn on **Voice Tutor Mode** and ask Jacob to teach you something — he plans a
+multi-section lesson and draws it on the whiteboard while narrating, in sync,
+with a live talking sprite.
+
+[![Watch the voice lesson demo](https://img.youtube.com/vi/JC6m4VCns-0/hqdefault.jpg)](https://www.youtube.com/watch?v=JC6m4VCns-0)
+
+[Watch the voice lesson demo](https://www.youtube.com/watch?v=JC6m4VCns-0)
+
+---
+
 ## Example: generated Manim video
 
 <video src="example_video.mp4" controls width="100%"></video>

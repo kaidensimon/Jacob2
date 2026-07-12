@@ -16,6 +16,32 @@ export interface Bounds {
 const DEFAULT_W = 160
 const DEFAULT_H = 80
 
+// Excalidraw bakes each text element's width in at CREATION time by measuring
+// the glyphs. If the hand-drawn face ("Excalifont") hasn't loaded yet, it
+// measures with a narrow fallback and stores a width ~20% too small — then the
+// real, wider glyphs overflow and get CLIPPED. Every render path must wait for
+// the font so text is measured against what it will actually render with.
+// Memoized: the fetch happens once, callers just await the settled promise.
+let _fontsReady: Promise<void> | null = null
+export function ensureCanvasFonts(): Promise<void> {
+  if (_fontsReady) return _fontsReady
+  _fontsReady = (async () => {
+    const fonts: any = typeof document !== 'undefined' ? (document as any).fonts : undefined
+    if (!fonts?.load) return
+    // Retry: the Excalifont FontFace is registered by Excalidraw asynchronously,
+    // so on a cold start load() can fire before it exists. Poll briefly until
+    // the face is actually loaded (or give up after ~3s and let it render).
+    for (let i = 0; i < 30; i++) {
+      try {
+        await Promise.all([fonts.load('20px Excalifont'), fonts.load('36px Excalifont')])
+      } catch { /* face not registered yet */ }
+      if (fonts.check('20px Excalifont')) return
+      await new Promise((r) => setTimeout(r, 100))
+    }
+  })()
+  return _fontsReady
+}
+
 /**
  * Excalidraw's hand-drawn font is missing glyphs for a few math symbols, which
  * render as garbage (∫→"°", √→"Ã", ≠→"-", ∞→"°"). Everything else — ∂ ∇ ∑ ∏ ∮

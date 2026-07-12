@@ -15,7 +15,11 @@ import { GrapherBoundary } from '../grapher/GrapherBoundary'
 import { useLessonPlayer } from '../lesson/useLessonPlayer'
 import { JacobTalking } from '../lesson/JacobTalking'
 
-const STORAGE_KEY = 'excalidraw-session'
+// The local autosave is namespaced PER USER — a shared browser must never
+// hand one account's canvas to another. (The old un-namespaced key leaked the
+// previous user's board to whoever logged in next; it gets cleaned up below.)
+const LEGACY_STORAGE_KEY = 'excalidraw-session'
+const storageKey = (userId: number) => `excalidraw-session:${userId}`
 
 type SavedScene = {
   elements: readonly ExcalidrawElement[]
@@ -23,9 +27,10 @@ type SavedScene = {
   files?: any
 }
 
-function loadLocalScene(): SavedScene | undefined {
+function loadLocalScene(userId: number): SavedScene | undefined {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
+    localStorage.removeItem(LEGACY_STORAGE_KEY) // retire the shared pre-fix key
+    const raw = localStorage.getItem(storageKey(userId))
     if (!raw) return undefined
     const data = JSON.parse(raw)
     return {
@@ -71,6 +76,14 @@ export default function Whiteboard() {
       setGrapher({ mode, expressions, key: grapherKey.current++ }),
     []
   )
+
+  // Start loading the hand-drawn font the moment Excalidraw is up, so text is
+  // never measured before the font it renders with is ready (otherwise widths
+  // bake too narrow and glyphs clip).
+  useEffect(() => {
+    if (!api) return
+    void import('../excalidraw-agent/convert').then((m) => m.ensureCanvasFonts())
+  }, [api])
 
   const agent = useExcalidrawAgent(api, openGrapher)
   // Voice "show me this as an animation" → the chat orchestrator, whose router
@@ -129,7 +142,8 @@ export default function Whiteboard() {
       // deterministically without an LLM call.
       async renderRaw(shapes: any[]) {
         if (!api) return 0
-        const { shapesToElements } = await import('../excalidraw-agent/convert')
+        const { shapesToElements, ensureCanvasFonts } = await import('../excalidraw-agent/convert')
+        await ensureCanvasFonts()
         const map = new Map<string, any>(shapes.map((s: any) => [s.id, s]))
         const els = shapesToElements(map, new Map())
         api.updateScene({ elements: els })
@@ -138,8 +152,10 @@ export default function Whiteboard() {
     }
   }, [api, agent.sendMessage, agent.stop, agent.newChat, agent.isGenerating, agent.chat, agent.agentView, lesson.teach])
 
-  // Load the scene: from the account if ?session=<id>, else from localStorage.
+  // Load the scene: from the account if ?session=<id>, else from THIS user's
+  // local autosave (never another account's).
   useEffect(() => {
+    if (!user) return
     let cancelled = false
     async function load() {
       if (sessionId) {
@@ -154,10 +170,10 @@ export default function Whiteboard() {
           })
           setSession({ id, title })
         } catch {
-          if (!cancelled) setInitialData(loadLocalScene())
+          if (!cancelled) setInitialData(loadLocalScene(user!.id))
         }
       } else {
-        setInitialData(loadLocalScene())
+        setInitialData(loadLocalScene(user!.id))
       }
       if (!cancelled) setLoaded(true)
     }
@@ -165,17 +181,18 @@ export default function Whiteboard() {
     return () => {
       cancelled = true
     }
-  }, [sessionId])
+  }, [sessionId, user])
 
   const handleChange = useCallback(
     (elements: readonly ExcalidrawElement[], appState: AppState) => {
+      if (!user) return
       clearTimeout(saveTimer.current)
       saveTimer.current = setTimeout(() => {
         try {
           const { collaborators, ...persistableAppState } = appState
           void collaborators
           localStorage.setItem(
-            STORAGE_KEY,
+            storageKey(user.id),
             JSON.stringify({ elements, appState: persistableAppState })
           )
         } catch {
@@ -183,7 +200,7 @@ export default function Whiteboard() {
         }
       }, 500)
     },
-    []
+    [user]
   )
 
   // Save the current canvas to the user's account (with a thumbnail).
@@ -317,7 +334,7 @@ export default function Whiteboard() {
               boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
             }}
           >
-            Ready to move on →
+            {lesson.digestFinal ? 'End lesson' : 'Ready to move on →'}
           </button>
         )}
 

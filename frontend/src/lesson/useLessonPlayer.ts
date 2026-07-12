@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { exportToBlob } from '@excalidraw/excalidraw'
 import type { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types'
 import type { ExcalidrawElement } from '@excalidraw/excalidraw/element/types'
-import { shapesToElements } from '../excalidraw-agent/convert'
+import { shapesToElements, ensureCanvasFonts } from '../excalidraw-agent/convert'
 import type { AgentShape } from '../excalidraw-agent/types'
 import { renderLatexToImage } from '../excalidraw-agent/mathRender'
 
@@ -75,6 +75,8 @@ export function useLessonPlayer(
   const [transcript, setTranscript] = useState('')
   // post-cleanup "digest" window: true while the ready-to-move-on button shows
   const [digest, setDigest] = useState(false)
+  // the digest window belongs to the LAST section — button reads "End lesson"
+  const [digestFinal, setDigestFinal] = useState(false)
   // true while a TTS clip is actually playing — drives the talking sprite
   const [speaking, setSpeaking] = useState(false)
 
@@ -194,6 +196,9 @@ export function useLessonPlayer(
             } catch { /* skip */ }
           })
       )
+      // Never measure text before the hand-drawn font is loaded, or Excalidraw
+      // bakes in a too-narrow width and the glyphs clip.
+      await ensureCanvasFonts()
       const converted = shapesToElements(map, new Map())
       for (const el of converted) lessonElsRef.current.add(el.id)
       const hidden = converted.map((e) => ({ ...e, opacity: 0 }) as ExcalidrawElement)
@@ -333,7 +338,7 @@ export function useLessonPlayer(
           await loadShapes(msg.shapes, msg.origin)
           revealIds((msg.shapes || []).map((s: AgentShape) => s.id), true)
           break
-        case 'digest': setDigest(true); break
+        case 'digest': setDigest(true); setDigestFinal(!!msg.final); break
         case 'digestDone': setDigest(false); break
         case 'listening': setStatus('listening'); break
         case 'thinking': setStatus('thinking'); break
@@ -463,5 +468,5 @@ export function useLessonPlayer(
     await connect(); send({ type: 'startLesson', topic })
   }, [connect])
 
-  return { toggleVoice, enableVoice, disableVoice, teach, voiceOn, status, caption, transcript, digest, moveOn, speaking, analyser: analyserRef }
+  return { toggleVoice, enableVoice, disableVoice, teach, voiceOn, status, caption, transcript, digest, digestFinal, moveOn, speaking, analyser: analyserRef }
 }

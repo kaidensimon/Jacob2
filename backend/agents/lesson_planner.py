@@ -120,14 +120,23 @@ Lay this section's diagram out in a clean region roughly (0,0) to (960,640). x �
 7. Valid JSON only, no prose outside it.""" + PERSONA
 
 
-def plan_section(topic: str, section: dict, prior_sections: list, api_key: str, model: str = None) -> dict:
+def plan_section(topic: str, section: dict, prior_sections: list, api_key: str,
+                 model: str = None, is_last: bool = False) -> dict:
     model = model or get_model_name({})
     prior = ''
     if prior_sections:
         lines = '\n'.join(f"- {s.get('title')}: {s.get('goal', '')}" for s in prior_sections)
         prior = f"\nAlready taught in earlier sections (build on these, don't repeat them):\n{lines}\n"
+    last = ''
+    if is_last:
+        last = (
+            "\nIMPORTANT: this is the FINAL section of the lesson. The last beat's `say` must "
+            "CLOSE THE LESSON — a one-breath recap and a clear, in-character sign-off that the "
+            "lesson is finished (e.g. \"...and that's the whole story, mate — lesson's done, nice work\"). "
+            "Do NOT tease a next section, and do NOT tell the learner to continue or press anything.\n"
+        )
     user = (
-        f"Overall lesson topic: {topic}\n{prior}\n"
+        f"Overall lesson topic: {topic}\n{prior}{last}\n"
         f"Plan THIS section now:\n"
         f"  title: {section.get('title')}\n"
         f"  goal:  {section.get('goal')}\n\n"

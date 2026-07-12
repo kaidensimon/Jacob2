@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react'
 import type { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types'
-import { shapesToElements } from './convert'
+import { shapesToElements, ensureCanvasFonts } from './convert'
 import type { Bounds } from './convert'
 import {
   gatherContext,
@@ -204,6 +204,7 @@ export function useExcalidrawAgent(
   )
 
   // Re-render the agent's shapes onto the canvas, preserving the user's own shapes.
+  const fontCorrectedRef = useRef(false)
   const applyToCanvas = useCallback(() => {
     if (!api) return
     const userElements = api
@@ -224,7 +225,28 @@ export function useExcalidrawAgent(
     const newAgentIds = new Set(converted.map((e) => e.id))
     api.updateScene({ elements: [...userElements, ...converted] })
     agentElementIdsRef.current = newAgentIds
+
+    // If the hand-drawn font wasn't loaded when we just measured, every text
+    // width is baked too narrow and will clip. Don't block streaming — render
+    // now, then re-render ONCE the font is ready so all widths are corrected.
+    if (!fontCorrectedRef.current) {
+      const loaded =
+        typeof document !== 'undefined' &&
+        (document as any).fonts?.check?.('20px Excalifont')
+      if (loaded) {
+        fontCorrectedRef.current = true
+      } else {
+        ensureCanvasFonts().then(() => {
+          fontCorrectedRef.current = true
+          applyToCanvasRef.current?.()
+        })
+      }
+    }
   }, [api])
+  // Stable self-reference so the font-correction re-render can call the latest
+  // applyToCanvas without adding it to its own dependency list.
+  const applyToCanvasRef = useRef(applyToCanvas)
+  applyToCanvasRef.current = applyToCanvas
 
   // Render a `math` shape's LaTeX to an image, register it as an Excalidraw
   // file, and stamp the shape with its fileId + measured size so it renders.
